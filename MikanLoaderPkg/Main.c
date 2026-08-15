@@ -7,6 +7,10 @@
 #include  <Protocol/DiskIo2.h>
 #include  <Protocol/BlockIo.h>
 
+#define DEBUG_PRINT(fmt, ...) \
+AsciiPrint("[%a:%d: %a] " fmt "\n", \
+           __FILE__, __LINE__, __func__, ##__VA_ARGS__)
+
 struct MemoryMap {
     UINTN buffer_size;
     VOID* buffer;
