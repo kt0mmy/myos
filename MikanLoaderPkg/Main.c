@@ -7,9 +7,9 @@
 #include  <Protocol/DiskIo2.h>
 #include  <Protocol/BlockIo.h>
 
-#define DEBUG_PRINT(fmt, ...) \
-AsciiPrint("[%a:%d: %a] " fmt "\n", \
-           __FILE__, __LINE__, __func__, ##__VA_ARGS__)
+#define DEBUG_PRINT_STATUS(status) \
+AsciiPrint("[DEBUG] %a:%d:%a status = %r\n", \
+           __FILE__, __LINE__, __func__, status)
 
 struct MemoryMap {
     UINTN buffer_size;
@@ -130,6 +130,7 @@ EFI_STATUS EFIAPI UefiMain(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *system_tab
         root_dir, &memmap_file, L"\\memmap",
         EFI_FILE_MODE_READ | EFI_FILE_MODE_WRITE | EFI_FILE_MODE_CREATE, 0
     );
+    DEBUG_PRINT_STATUS(status);
 
     SaveMemoryMap(&memmap, memmap_file);
     memmap_file->Close(memmap_file);
