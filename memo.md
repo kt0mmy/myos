@@ -8,6 +8,13 @@ build
 ~/osbook/devenv/run_qemu.sh ~/edk2/Build/MikanLoaderX64/DEBUG_CLANG38/X64/Loader.efi
 ```
 
+カーネルのコンパイル
+```
+cd ~/workspace/myos/kernel
+clang++ -O2 -Wall -g --target=x86_64-elf -ffreestanding -mno-red-zone -fno-exceptions -fno-rtti -std=c++17 -c main.cpp
+ld.lld --entry KernalMain -z norelro --image-base 0x100000 --static -o kernel.elf main.o 
+```
+
 ## day02
 
 ### build コマンド
@@ -60,3 +67,25 @@ UEFIとやり取りをするインタフェースとなるデータ構造。各P
 `locate_protocol(GUID)` により、データ構造へのポインタが手に入る。
 
 locate_protocol 関数のポインタは EFI System Table にあり、それはエントリポイントから渡される。
+
+## day03
+
+### レジスタ
+
+`info registers`
+RIP: 次に実行する機械語命令の位置
+
+`x /fmt addr`
+メモリダンプ
+
+x /4xb addr （4バイト、16進数）
+x /4i addr （逆アセンブル）
+
+逆アセンブルが動かないので・・・
+~/osbook/devenv/run_image.sh で -s を追加
+
+
+```
+gdb
+target remote :1234
+```
