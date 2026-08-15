@@ -264,11 +264,11 @@ EFI_STATUS EFIAPI UefiMain(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *system_tab
 
     // NOTE: lld の仕様変更により、エントリーポイントとファイルのオフセットが一致しない
     // readelf -l kernel.elf からオフセットが0x120と判明したので、一旦決め打ちハードコード。
-    UINT64 entry_addr = 0x100120;
+    UINT64 entry_addr = 0x1001b0;
 
-    typedef void EntryPointType(void);
+    typedef void EntryPointType(UINT64, UINT64);
     EntryPointType *entry_point = (EntryPointType *)entry_addr;
-    entry_point();
+    entry_point(gop->Mode->FrameBufferBase, gop->Mode->FrameBufferSize);
 
     Print(L"All done\n");
 
