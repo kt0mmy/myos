@@ -1,0 +1,3 @@
+kernel/*.d
+kernel/*.o
+kernel/kernel.elf
