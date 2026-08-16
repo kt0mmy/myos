@@ -8,7 +8,9 @@
 #include <Protocol/BlockIo.h>
 #include <Guid/FileInfo.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/BaseMemoryLib.h>
 #include "frame_buffer_config.hpp"
+#include "elf.hpp"
 
 #define DEBUG_PRINT_STATUS(status)               \
     AsciiPrint("[DEBUG] %a:%d:%a status = %r\n", \
@@ -218,6 +220,38 @@ void Halt(void)
     }
 }
 
+void CalcLoadAddress(Elf64_Ehdr *ehdr, UINT64 *first_addr, UINT64 *last_addr)
+{
+    Elf64_Phdr *phdr = (Elf64_Phdr *)((UINT64)ehdr + ehdr->e_phoff);
+    *first_addr = MAX_UINT64;
+    *last_addr = 0;
+
+    for (Elf64_Half i = 0; i < ehdr->e_phnum; i++)
+    {
+        if (phdr[i].p_type != PT_LOAD)
+            continue;
+        *first_addr = MIN(*first_addr, phdr[i].p_vaddr);
+        *last_addr = MAX(*last_addr, phdr[i].p_vaddr + phdr[i].p_memsz);
+    }
+}
+
+void CopyLoadSegments(Elf64_Ehdr *ehdr)
+{
+    Elf64_Phdr *phdr = (Elf64_Phdr *)((UINT64)ehdr + ehdr->e_phoff);
+
+    for (Elf64_Half i = 0; i < ehdr->e_phnum; i++)
+    {
+        if (phdr[i].p_type != PT_LOAD)
+            continue;
+
+        UINT64 segm_in_file = (UINT64)ehdr + phdr[i].p_offset;
+        CopyMem((VOID *)phdr[i].p_vaddr, (VOID *)segm_in_file, phdr[i].p_filesz);
+
+        UINTN remain_bytes = phdr[i].p_memsz - phdr[i].p_filesz;
+        SetMem((VOID*)(phdr[i].p_vaddr + phdr[i].p_filesz), remain_bytes, 0);
+    }
+}
+
 EFI_STATUS EFIAPI UefiMain(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *system_table)
 {
     EFI_STATUS status;
@@ -254,7 +288,7 @@ EFI_STATUS EFIAPI UefiMain(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *system_tab
     EFI_GRAPHICS_OUTPUT_PROTOCOL *gop;
     status = OpenGOP(image_handle, &gop);
     HALT_IF_EFI_ERROR(status);
-        
+
     Print(L"Resolution: %ux%u, PixelFormat: %s, %u pixels/line\n",
           gop->Mode->Info->HorizontalResolution,
           gop->Mode->Info->VerticalResolution,
@@ -284,21 +318,48 @@ EFI_STATUS EFIAPI UefiMain(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *system_tab
         kernel_file, &gEfiFileInfoGuid,
         &file_info_size, file_info_buffer);
     HALT_IF_EFI_ERROR(status);
-    
+
     EFI_FILE_INFO *file_info = (EFI_FILE_INFO *)file_info_buffer;
     UINTN kernel_file_size = file_info->FileSize;
 
-    EFI_PHYSICAL_ADDRESS kernel_base_addr = 0x100000;
-    status = gBS->AllocatePages(
-        AllocateAddress, EfiLoaderData,
-        // NOTE: ページ数を算出（切り上げ）
-        (kernel_file_size + 0xfff) / 0x1000, &kernel_base_addr);
-
+    VOID *kernel_buffer;
+    status = gBS->AllocatePool(EfiLoaderData, kernel_file_size, &kernel_buffer);
     HALT_IF_EFI_ERROR(status);
 
-    status = kernel_file->Read(kernel_file, &kernel_file_size, (VOID *)kernel_base_addr);
-    Print(L"Kernel: 0x%0lx (%lu bytes)\n", kernel_base_addr, kernel_file_size);
-    DEBUG_PRINT_STATUS(status);
+    status = kernel_file->Read(kernel_file, &kernel_file_size, kernel_buffer);
+    HALT_IF_EFI_ERROR(status);
+
+    Elf64_Ehdr *kernel_ehdr = (Elf64_Ehdr *)kernel_buffer;
+    UINT64 kernel_first_addr, kernel_last_addr;
+    CalcLoadAddress(kernel_ehdr, &kernel_first_addr, &kernel_last_addr);
+
+    // ページ数を切り上げで求める
+    UINTN num_pages = (kernel_last_addr - kernel_first_addr + 0xfff) / 0x1000;
+    status = gBS->AllocatePages(AllocateAddress, EfiLoaderData, num_pages, &kernel_first_addr);
+    HALT_IF_EFI_ERROR(status);
+
+    CopyLoadSegments(kernel_ehdr);
+    status = gBS->FreePool(kernel_buffer);
+    HALT_IF_EFI_ERROR(status);
+
+    struct FrameBuferConfig config = {
+        (UINT8 *)gop->Mode->FrameBufferBase,
+        gop->Mode->Info->PixelsPerScanLine,
+        gop->Mode->Info->HorizontalResolution,
+        gop->Mode->Info->VerticalResolution,
+        0};
+    switch (gop->Mode->Info->PixelFormat)
+    {
+    case PixelBlueGreenRedReserved8BitPerColor:
+        config.pixel_format = kPixelBGRResv8BitPerColor;
+        break;
+    case PixelRedGreenBlueReserved8BitPerColor:
+        config.pixel_format = kPixelRGBResv8BitPerColor;
+        break;
+    default:
+        Print(L"Unimplemented pixel format: %d\n", gop->Mode->Info->PixelFormat);
+        Halt();
+    }
 
     status = gBS->ExitBootServices(image_handle, memmap.map_key);
     if (EFI_ERROR(status))
@@ -310,35 +371,11 @@ EFI_STATUS EFIAPI UefiMain(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *system_tab
         DEBUG_PRINT_STATUS(status);
     }
 
+    UINT64 entry_addr = *(UINT64 *)(kernel_first_addr + 24);
 
-    struct FrameBuferConfig config = {
-        (UINT8*)gop->Mode->FrameBufferBase,
-        gop->Mode->Info->PixelsPerScanLine,
-        gop->Mode->Info->HorizontalResolution,
-        gop->Mode->Info->VerticalResolution,
-        0
-    };
-    switch (gop->Mode->Info->PixelFormat) {
-        case PixelBlueGreenRedReserved8BitPerColor:
-            config.pixel_format = kPixelBGRResv8BitPerColor;
-            break;
-        case PixelRedGreenBlueReserved8BitPerColor:
-            config.pixel_format = kPixelRGBResv8BitPerColor;
-            break;
-        default:
-            Print(L"Unimplemented pixel format: %d\n", gop->Mode->Info->PixelFormat);
-            Halt();
-    }
-
-    // NOTE: lld の仕様変更により、エントリーポイントとファイルのオフセットが一致しない
-    // readelf -l kernel.elf からオフセットが0x120と判明したので、一旦決め打ちハードコード。
-    UINT64 entry_addr = 0x1001b0;
-
-    typedef void EntryPointType(const struct FrameBuferConfig*);
+    typedef void EntryPointType(const struct FrameBuferConfig *);
     EntryPointType *entry_point = (EntryPointType *)entry_addr;
     entry_point(&config);
-
-    Print(L"All done\n");
 
     while (1)
         ;
