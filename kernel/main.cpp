@@ -1,9 +1,9 @@
 #include <cstdint>
 #include <cstddef>
+#include <cstdio>
 #include "frame_buffer_config.hpp"
 #include "graphics.hpp"
 #include "font.hpp"
-
 
 void *operator new(size_t size, void *buf)
 {
@@ -66,9 +66,17 @@ extern "C" void KernelMain(const FrameBuferConfig &frame_buffer_config)
     }
 
     int i = 0;
-    for (char c='!';c<='~';c++, i++) {
+    for (char c = '!'; c <= '~'; c++, i++)
+    {
         WriteAscii(*pixel_writer, 50 + i * 8, 50, c, {0, 0, 0});
     }
+    WriteString(*pixel_writer, 0, 66, "Hello, World!", {0, 0, 255});
+    WriteString(*pixel_writer, 0, 90, "Hello\nWorld!", {0, 0, 255});
+
+
+    char buf[128];
+    sprintf(buf, "1 + 2 = %d", 1 + 2);
+    WriteString(*pixel_writer, 0, 82, buf, {0, 0, 0});
     while (1)
         __asm__("hlt");
 }
