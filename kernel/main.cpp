@@ -4,6 +4,7 @@
 #include "frame_buffer_config.hpp"
 #include "graphics.hpp"
 #include "font.hpp"
+#include "console.hpp"
 
 void *operator new(size_t size, void *buf)
 {
@@ -57,6 +58,11 @@ extern "C" void KernelMain(const FrameBuferConfig &frame_buffer_config)
         pixel_writer = new (pixel_writer_buf) RGBResv8BitPerColorPixelWriter{frame_buffer_config};
         break;
     }
+
+    // new がない場合、スタックに作られる
+    // 一方、PixelWriter は自分で確保したメモリに動的に作られる
+    Console console = Console{*pixel_writer, {0, 0, 0}, {255, 255, 255}};
+
     for (int x = 0; x < frame_buffer_config.horizontal_resolution; x++)
     {
         for (int y = 0; y < frame_buffer_config.vertical_resolution; y++)
@@ -73,10 +79,13 @@ extern "C" void KernelMain(const FrameBuferConfig &frame_buffer_config)
     WriteString(*pixel_writer, 0, 66, "Hello, World!", {0, 0, 255});
     WriteString(*pixel_writer, 0, 90, "Hello\nWorld!", {0, 0, 255});
 
-
     char buf[128];
-    sprintf(buf, "1 + 2 = %d", 1 + 2);
-    WriteString(*pixel_writer, 0, 82, buf, {0, 0, 0});
+    for (int row = 0; row < 27; row++)
+    {
+        sprintf(buf, "line %d\n", row);
+        console.PutString(buf);
+    }
+
     while (1)
         __asm__("hlt");
 }

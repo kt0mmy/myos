@@ -2,10 +2,12 @@
 # Makeffile の最終成果物
 TARGET = kernel.elf
 # TARGET を作るために必要なオブジェクトファイル
-OBJS = main.o graphics.o font.o hankaku.o
+OBJS = main.o graphics.o font.o hankaku.o newlib_support.o console.o
 DEPENDS = $(join $(dir $(OBJS)),$(addprefix .,$(notdir $(OBJS:.o=.d))))
+
+CFLAGS   += -O2 -Wall -g --target=x86_64-elf -ffreestanding -mno-red-zone
 CXXFLAGS += -O2 -Wall -g --target=x86_64-elf -ffreestanding -mno-red-zone \
-			-fno-exceptions -fno-rtti -std=c++17
+            -fno-exceptions -fno-rtti -std=c++17
 LDFLAGS  += --entry KernelMain -z norelro --image-base 0x100000 --static
 
 # ルール
@@ -23,7 +25,7 @@ clean:
 
 # Makefile を指定することで、Makefile 更新によってレシピが実行される
 kernel.elf: $(OBJS) Makefile
-	ld.lld $(LDFLAGS) -o kernel.elf $(OBJS)
+	ld.lld $(LDFLAGS) -o kernel.elf $(OBJS) -lc
 
 # $< は必須項目の先頭1つ
 # $^ は必須項目すべて
@@ -34,6 +36,14 @@ kernel.elf: $(OBJS) Makefile
 
 .%.d: %.cpp
 	clang++ $(CPPFLAGS) $(CXXFLAGS) -MM $< > $@
+	$(eval OBJ = $(<:.cpp=.o))
+	sed --in-place 's|$(notdir $(OBJ))|$(OBJ)|' $@
+
+%.o: %.c Makefile 
+	clang $(CPPFLAGS) $(CFLAGS) -c $<
+
+.%.d: %.c
+	clang $(CPPFLAGS) $(CFLAGS) -MM $< > $@
 	$(eval OBJ = $(<:.cpp=.o))
 	sed --in-place 's|$(notdir $(OBJ))|$(OBJ)|' $@
 
