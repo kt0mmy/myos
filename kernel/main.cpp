@@ -46,6 +46,22 @@ int WritePixel(const FrameBuferConfig &config, int x, int y, const PixelColor &c
 char pixel_writer_buf[sizeof(RGBResv8BitPerColorPixelWriter)];
 PixelWriter *pixel_writer;
 
+char console_buf[sizeof(Console)];
+Console* console;
+
+int printk(const char* format, ...) {
+    va_list ap;
+    int result;
+    char s[1024];
+
+    va_start(ap, format);
+    result = vsprintf(s, format, ap);
+    va_end(ap);
+
+    console->PutString(s);
+    return result;
+}
+
 // NOTE: マングリングを防ぐ
 extern "C" void KernelMain(const FrameBuferConfig &frame_buffer_config)
 {
@@ -59,31 +75,11 @@ extern "C" void KernelMain(const FrameBuferConfig &frame_buffer_config)
         break;
     }
 
-    // new がない場合、スタックに作られる
-    // 一方、PixelWriter は自分で確保したメモリに動的に作られる
-    Console console = Console{*pixel_writer, {0, 0, 0}, {255, 255, 255}};
+    console = new(console_buf) Console{*pixel_writer, {0, 0, 0}, {255, 255, 255}};
 
-    for (int x = 0; x < frame_buffer_config.horizontal_resolution; x++)
-    {
-        for (int y = 0; y < frame_buffer_config.vertical_resolution; y++)
-        {
-            pixel_writer->Write(x, y, {255, 0, 255});
-        }
-    }
-
-    int i = 0;
-    for (char c = '!'; c <= '~'; c++, i++)
-    {
-        WriteAscii(*pixel_writer, 50 + i * 8, 50, c, {0, 0, 0});
-    }
-    WriteString(*pixel_writer, 0, 66, "Hello, World!", {0, 0, 255});
-    WriteString(*pixel_writer, 0, 90, "Hello\nWorld!", {0, 0, 255});
-
-    char buf[128];
     for (int row = 0; row < 27; row++)
     {
-        sprintf(buf, "line %d\n", row);
-        console.PutString(buf);
+        printk("printk: %d\n", row);
     }
 
     while (1)
