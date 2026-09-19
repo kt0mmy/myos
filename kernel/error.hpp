@@ -12,10 +12,23 @@ public:
         kSuccess,
         kFull,
         kEmpty,
+        kIndexOutOfRange,
+        kNotImplemented,
+        kInvalidDescriptor,
+        kInvalidPhase,
+        kNoWaiter,
+        kNoEnoughMemory,
+        kInvalidSlotID,
+        kUnknownXHCISpeedID,
+        kTransferFailed,
+        kNoCorrespondingSetupStage,
+        kTransferRingNotSet,
+        kInvalidEndpointNumber,
+        kAlreadyAllocated,
         kLastOfCode,
     };
 
-    Error(Code code) : code_{code} {}
+    Error(Code code, const char *file, int line) : code_{code}, line_{line}, file_{file} {}
 
     operator bool() const
     {
@@ -27,11 +40,45 @@ public:
         return code_names_[code_];
     }
 
+    const char *File() const
+    {
+        return this->file_;
+    }
+
+    int Line() const
+    {
+        return this->line_;
+    }
+
 private:
-    static constexpr std::array<const char *, 3> code_names_ = {
+    static constexpr std::array<const char *, 16> code_names_ = {
         "kSuccess",
         "kFull",
-        "kEmpty"};
+        "kEmpty",
+        "kIndexOutOfRange",
+        "kNotImplemented",
+        "kInvalidDescriptor",
+        "kInvalidPhase",
+        "kNoWaiter",
+        "kNoEnoughMemory",
+        "kInvalidSlotID",
+        "kUnknownXHCISpeedID",
+        "kTransferFailed",
+        "kNoCorrespondingSetupStage",
+        "kTransferRingNotSet",
+        "kInvalidEndpointNumber",
+        "kAlreadyAllocated",
+    };
 
     Code code_;
+    int line_;
+    const char *file_;
+};
+
+#define MAKE_ERROR(code) Error((code), __FILE__, __LINE__)
+template <class T>
+struct WithError
+{
+    T value;
+    Error error;
 };
