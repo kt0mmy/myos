@@ -6,6 +6,13 @@
 #include "font.hpp"
 #include "console.hpp"
 #include "pci.hpp"
+#include "logger.hpp"
+#include "mouse.hpp"
+#include "usb/memory.hpp"
+#include "usb/device.hpp"
+#include "usb/classdriver/mouse.hpp"
+#include "usb/xhci/xhci.hpp"
+#include "usb/xhci/trb.hpp"
 
 /**
  * NOTE:
@@ -71,34 +78,34 @@ int printk(const char *format, ...)
 const PixelColor kDesktopBGColor{45, 118, 237};
 const PixelColor kDesktopFGColor{255, 255, 255};
 
-const int kMouseCursorWidth = 15;
-const int kMouseCursorHeight = 24;
+void SwitchEhci2Xhci(const pci::Device &xhc_dev)
+{
+    bool intel_ehc_exist = false;
+    for (int i = 0; i < pci::num_device; i++)
+    {
+        intel_ehc_exist = pci::devices[i].class_code.Match(0x0cu, 0x03u, 0x20u) && pci::ReadVendorId(pci::devices[i]) == 0x8086;
+        if (intel_ehc_exist)
+            break;
+    }
 
-const char mouse_cursor_shape[kMouseCursorHeight][kMouseCursorWidth + 1] = {
-    "@              ",
-    "@@             ",
-    "@.@            ",
-    "@..@           ",
-    "@...@          ",
-    "@....@         ",
-    "@.....@        ",
-    "@......@       ",
-    "@.......@      ",
-    "@........@     ",
-    "@.........@    ",
-    "@..........@   ",
-    "@...........@  ",
-    "@............@ ",
-    "@......@@@@@@@@",
-    "@......@       ",
-    "@....@@.@      ",
-    "@...@ @.@      ",
-    "@..@   @.@     ",
-    "@.@    @.@     ",
-    "@@      @.@    ",
-    "@       @.@    ",
-    "         @.@   ",
-    "         @@@   "};
+    if (!intel_ehc_exist)
+        return;
+
+    uint32_t superspeed_ports = pci::ReadConfReg(xhc_dev, 0xdc);
+    pci::WriteConfReg(xhc_dev, 0xd8, superspeed_ports);
+
+    uint32_t ehci2xhci_ports = pci::ReadConfReg(xhc_dev, 0xd4);
+    pci::WriteConfReg(xhc_dev, 0xd0, ehci2xhci_ports);
+    Log(kDebug, "SwitchEhci2Xhci: SS = %02, xHCI = %02x\n", superspeed_ports, ehci2xhci_ports);
+}
+
+char mouse_cursor_buf[sizeof(MouseCursor)];
+MouseCursor *mouse_cursor;
+
+void MouseObserver(int8_t displacement_x, int8_t displacement_y)
+{
+    mouse_cursor->MoveRelative({displacement_x, displacement_y});
+}
 
 // NOTE: マングリングを防ぐ
 extern "C" void KernelMain(const FrameBuferConfig &frame_buffer_config)
@@ -136,20 +143,8 @@ extern "C" void KernelMain(const FrameBuferConfig &frame_buffer_config)
 
     console = new (console_buf) Console{*pixel_writer, kDesktopFGColor, kDesktopBGColor};
 
-    for (int dy = 0; dy < kMouseCursorHeight; dy++)
-    {
-        for (int dx = 0; dx < kMouseCursorWidth; dx++)
-        {
-            if (mouse_cursor_shape[dy][dx] == '@')
-            {
-                pixel_writer->Write(200 + dx, 100 + dy, {0, 0, 0});
-            }
-            else if (mouse_cursor_shape[dy][dx] == '.')
-            {
-                pixel_writer->Write(200 + dx, 100 + dy, {255, 255, 255});
-            }
-        }
-    }
+    mouse_cursor = new (mouse_cursor_buf) MouseCursor{
+        pixel_writer, kDesktopBGColor, {300, 200}};
 
     auto err = pci::ScanAllBus();
     printk("ScanAllBus: %s\n", err.Name());
@@ -160,6 +155,69 @@ extern "C" void KernelMain(const FrameBuferConfig &frame_buffer_config)
         auto vendor_id = pci::ReadVendorId(dev.bus, dev.device, dev.function);
         auto class_code = pci::ReadClassCode(dev.bus, dev.device, dev.function);
         printk("%d.%d.%d: vend %04x, class %08x, head %02x\n", dev.bus, dev.device, dev.function, vendor_id, class_code, dev.header_type);
+    }
+
+    pci::Device *xhc_dev = nullptr;
+    for (int i = 0; i < pci::num_device; i++)
+    {
+        if (pci::devices[i].class_code.Match(0x0cu, 0x03u, 0x30u))
+        {
+            xhc_dev = &pci::devices[i];
+
+            if (pci::ReadVendorId(*xhc_dev) == 0x8086)
+                break;
+        }
+    }
+
+    if (xhc_dev)
+    {
+        Log(kInfo, "xHC has been found: %d.%d.%d\n", xhc_dev->bus, xhc_dev->device, xhc_dev->function);
+    } else {
+        Log(kError, "xHC has not been found: %d.%d.%d\n", xhc_dev->bus, xhc_dev->device, xhc_dev->function);
+        
+    }
+
+    const WithError<uint64_t> xhc_bar = pci::ReadBar(*xhc_dev, 0);
+    Log(kDebug, "ReadBar: %s\n", xhc_bar.error.Name());
+
+    const uint64_t xhc_mmio_base = xhc_bar.value & ~static_cast<uint64_t>(0xf); // 末尾4ビットはマスクする
+    Log(kDebug, "xHC mmio_base = %08lx\n", xhc_mmio_base);
+
+    usb::xhci::Controller xhc{xhc_mmio_base};
+    if (pci::ReadVendorId(*xhc_dev) == 0x8086)
+    {
+        SwitchEhci2Xhci(*xhc_dev);
+    }
+    {
+        auto err = xhc.Initialize();
+        Log(kDebug, "xhc.Initialize: %s\n", err.Name());
+    }
+
+    Log(kInfo, "xHC starting\n");
+    xhc.Run();
+
+    usb::HIDMouseDriver::default_observer = MouseObserver;
+    for (int i = 1; i <= xhc.MaxPorts(); i++)
+    {
+        auto port = xhc.PortAt(i);
+        Log(kDebug, "Port %d: IsConnected=%d\n", i, port.IsConnected());
+
+        if (port.IsConnected())
+        {
+            if (auto err = ConfigurePort(xhc, port))
+            {
+                Log(kError, "failed to configure port: %s at %s:%d\n", err.Name(), err.File(), err.Line());
+                continue;
+            }
+        }
+    }
+
+    while (1)
+    {
+        if (auto err = ProcessEvent(xhc))
+        {
+            Log(kError, "Error while ProcessEvent: %s at %s:%d\n", err.Name(), err.File(), err.Line());
+        }
     }
 
     printk("Hello, MyOS!");

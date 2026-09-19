@@ -2,13 +2,21 @@
 # Makeffile の最終成果物
 TARGET = kernel.elf
 # TARGET を作るために必要なオブジェクトファイル
-OBJS = main.o graphics.o font.o hankaku.o newlib_support.o console.o pci.o asmfunc.o
+OBJS = main.o graphics.o mouse.o font.o hankaku.o newlib_support.o console.o \
+       pci.o asmfunc.o libcxx_support.o logger.o \
+       usb/memory.o usb/device.o usb/xhci/ring.o usb/xhci/trb.o usb/xhci/xhci.o \
+       usb/xhci/port.o usb/xhci/device.o usb/xhci/devmgr.o usb/xhci/registers.o \
+       usb/classdriver/base.o usb/classdriver/hid.o usb/classdriver/keyboard.o \
+       usb/classdriver/mouse.o
 DEPENDS = $(join $(dir $(OBJS)),$(addprefix .,$(notdir $(OBJS:.o=.d))))
 
+CPPFLAGS += -I.
 CFLAGS   += -O2 -Wall -g --target=x86_64-elf -ffreestanding -mno-red-zone
 CXXFLAGS += -O2 -Wall -g --target=x86_64-elf -ffreestanding -mno-red-zone \
             -fno-exceptions -fno-rtti -std=c++17
 LDFLAGS  += --entry KernelMain -z norelro --image-base 0x100000 --static
+
+
 
 # ルール
 # ターゲット: 必須項目
@@ -16,38 +24,38 @@ LDFLAGS  += --entry KernelMain -z norelro --image-base 0x100000 --static
 
 # .PHONY 宣言の下に「ターゲット: 必須項目」
 # ターゲットは実際のファイル名ではなく、ルール名にしたいのでPHONY宣言をする
-.PHONY: all 
+.PHONY: all
 all: $(TARGET)
 
 .PHONY: clean
 clean:
-	rm -rf *.o 
+	rm -rf *.o
 
 # Makefile を指定することで、Makefile 更新によってレシピが実行される
 kernel.elf: $(OBJS) Makefile
-	ld.lld $(LDFLAGS) -o kernel.elf $(OBJS) -lc
+	ld.lld $(LDFLAGS) -o kernel.elf $(OBJS) -lc -lc++
+
+%.o: %.cpp Makefile
+	clang++ $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 # $< は必須項目の先頭1つ
 # $^ は必須項目すべて
 # $@ はターゲット
 # $* はパターンルールの幹（%に当てはまる部分）
-%.o: %.cpp Makefile 
-	clang++ $(CPPFLAGS) $(CXXFLAGS) -c $<
-
 .%.d: %.cpp
 	clang++ $(CPPFLAGS) $(CXXFLAGS) -MM $< > $@
 	$(eval OBJ = $(<:.cpp=.o))
 	sed --in-place 's|$(notdir $(OBJ))|$(OBJ)|' $@
 
-%.o: %.c Makefile 
-	clang $(CPPFLAGS) $(CFLAGS) -c $<
+%.o: %.c Makefile
+	clang $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 .%.d: %.c
 	clang $(CPPFLAGS) $(CFLAGS) -MM $< > $@
-	$(eval OBJ = $(<:.cpp=.o))
+	$(eval OBJ = $(<:.c=.o))
 	sed --in-place 's|$(notdir $(OBJ))|$(OBJ)|' $@
 
-%.o: %.asm Makefile 
+%.o: %.asm Makefile
 	nasm -f elf64 -o $@ $<
 
 hankaku.bin: hankaku.txt
