@@ -1,6 +1,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <cstdio>
+#include "queue.hpp"
 #include "frame_buffer_config.hpp"
 #include "graphics.hpp"
 #include "font.hpp"
@@ -101,6 +102,16 @@ void SwitchEhci2Xhci(const pci::Device &xhc_dev)
     Log(kDebug, "SwitchEhci2Xhci: SS = %02, xHCI = %02x\n", superspeed_ports, ehci2xhci_ports);
 }
 
+struct Message
+{
+    enum Type
+    {
+        kInterruptXHCI,
+    } type;
+};
+
+ArrayQueue<Message> *main_queue;
+
 char mouse_cursor_buf[sizeof(MouseCursor)];
 MouseCursor *mouse_cursor;
 
@@ -112,13 +123,7 @@ void MouseObserver(int8_t displacement_x, int8_t displacement_y)
 usb::xhci::Controller *xhc;
 __attribute__((interrupt)) void IntHandlerXHCI(InterruptFrame *frame)
 {
-    while (xhc->PrimaryEventRing()->HasFront())
-    {
-        if (auto err = ProcessEvent(*xhc))
-        {
-            Log(kError, "Error while ProcessEvent: %s at %s:%d\n", err.Name(), err.File(), err.Line());
-        }
-    }
+    main_queue->Push(Message{Message::kInterruptXHCI});
     NotifyEndOfInterrupt();
 }
 
@@ -161,6 +166,10 @@ extern "C" void KernelMain(const FrameBuferConfig &frame_buffer_config)
     mouse_cursor = new (mouse_cursor_buf) MouseCursor{
         pixel_writer, kDesktopBGColor, {300, 200}};
 
+    std::array<Message, 32> main_queue_data;
+    ArrayQueue<Message> main_queue{main_queue_data};
+    ::main_queue = &main_queue;
+
     auto err = pci::ScanAllBus();
     printk("ScanAllBus: %s\n", err.Name());
 
@@ -199,7 +208,7 @@ extern "C" void KernelMain(const FrameBuferConfig &frame_buffer_config)
 
     const uint8_t bsp_local_apic_id = *reinterpret_cast<const uint32_t *>(0xfee00020) >> 24;
     pci::ConfigureMSIFixedDestination(*xhc_dev, bsp_local_apic_id, pci::MSITriggerMode::kLevel, pci::MSIDeliveryMode::kFixed, InterruptVector::kXHCI, 0);
-    
+
     const WithError<uint64_t> xhc_bar = pci::ReadBar(*xhc_dev, 0);
     Log(kDebug, "ReadBar: %s\n", xhc_bar.error.Name());
 
@@ -236,6 +245,43 @@ extern "C" void KernelMain(const FrameBuferConfig &frame_buffer_config)
             }
         }
     }
+
+    while (true)
+    {
+        __asm__("cli");
+        if (main_queue.Count() == 0)
+        {
+            __asm__("sti\nhlt");
+            continue;
+        }
+
+        Message msg = main_queue.Front();
+        main_queue.Pop();
+        __asm__("sti");
+
+        switch (msg.type)
+        {
+        case Message::kInterruptXHCI:
+            while (xhc.PrimaryEventRing()->HasFront())
+            {
+                if (auto err = ProcessEvent(xhc))
+                {
+                    Log(kError, "Error while ProcessEvent: %s at %s:%d\n", err.Name(), err.File(), err.Line());
+                }
+            }
+        default:
+            Log(kError, "Unknown message type: %d\n", msg.type);
+        }
+    }
+
+    // NOTE: この間にマウスを動かしておくと、sti命令のあとに移動
+    // 割り込み禁止中、割り込みが保留されている
+    // __asm__("cli");
+    // for (int i = 0; i < 500; i++)
+    // {
+    //     Log(kError, "xHC starting: %s\n", i);
+    // }
+    // __asm__("sti");
 
     printk("Hello, MyOS!");
     while (1)
