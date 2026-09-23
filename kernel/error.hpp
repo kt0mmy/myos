@@ -25,6 +25,7 @@ public:
         kTransferRingNotSet,
         kInvalidEndpointNumber,
         kAlreadyAllocated,
+        kNoPCIMSI,
         kLastOfCode,
     };
 
@@ -51,7 +52,7 @@ public:
     }
 
 private:
-    static constexpr std::array<const char *, 16> code_names_ = {
+    static constexpr std::array code_names_ = {
         "kSuccess",
         "kFull",
         "kEmpty",
@@ -68,6 +69,7 @@ private:
         "kTransferRingNotSet",
         "kInvalidEndpointNumber",
         "kAlreadyAllocated",
+        "kNoPCIMSI",
     };
 
     Code code_;
