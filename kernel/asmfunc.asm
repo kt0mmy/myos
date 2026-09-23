@@ -13,3 +13,22 @@ IoIn32:
     mov dx, di
     in eax, dx
     ret
+
+; 引数はRDI, RSI, RDX, RCX, R8, R9の順
+global LoadIDT ; void LoadIDT(uint16_t limit, uint64_t offset);
+LoadIDT:
+    push rbp ; 呼び出し元のrbpをスタックにpush
+    mov rbp, rsp  ; 今のスタックの先頭をスタックのベースとする
+    sub rsp, 10 ; 10バイト確保
+    mov [rsp], di ; limit 
+    mov [rsp+2], rsi ; offset 
+    lidt [rsp]
+    mov rsp, rbp 
+    pop rbp 
+    ret
+
+global GetCS
+GetCS:
+    xor eax, eax 
+    mov ax, cs 
+    ret
