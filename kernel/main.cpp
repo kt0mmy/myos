@@ -12,6 +12,7 @@
 #include "mouse.hpp"
 #include "memory_map.hpp"
 #include "asmfunc.h"
+#include "segment.hpp"
 #include "usb/memory.hpp"
 #include "usb/device.hpp"
 #include "usb/classdriver/mouse.hpp"
@@ -178,6 +179,12 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
         MemoryType::kEfiConventionalMemory,
     };
 
+    SetupSegments();
+    const uint16_t kernel_cs = 1 << 3;
+    const uint16_t kernel_ss = 2 << 3;
+    SetDSAll(0);
+    SetCSSS(kernel_cs, kernel_ss);
+    
     printk("memory_map: %p\n", &memory_map);
     for (uintptr_t iter = reinterpret_cast<uintptr_t>(memory_map.buffer);
          iter < reinterpret_cast<uintptr_t>(memory_map.buffer) + memory_map.map_size;

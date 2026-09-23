@@ -44,3 +44,40 @@ KernelMain:
 .fin:
     hlt 
     jmp .fin
+
+global LoadGDT: ; void LoadGDT(uint16_t limit, uint64_t offset)
+LoadGDT:
+    push rbp 
+    mov rbp, rsp 
+    sub rsp, 10
+    mov [rsp], di ; limit 
+    mov [rsp + 2], rsi ; offset 
+    lgdt [rsp]
+    mov rsp, rbp 
+    pop rbp 
+    ret
+
+; Data Segment系のレジスタを設定(すべて使われないのでnullにする)
+global SetDSAll: ; void SetDSAll(uint16_t value);
+SetDSAll:
+    mov ds, di
+    mov es, di
+    mov fs, di
+    mov gs, di
+    ret
+
+global SetCSSS: ; void SetCSSS(uint16_t cs, uint16_t ss)
+SetCSSS:
+    push rbp
+    mov rbp, rsp 
+    mov ss, si 
+    mov rax, .next
+    push rdi ; far return で CS に設定
+    push rax ; far return で RIP に設定
+    o64 retf
+.next:
+    ; RIPに.nextが入っているので、ここから実行
+    ; 通常の関数の return 
+    mov rsp, rbp 
+    pop rbp 
+    ret

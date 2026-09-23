@@ -2,10 +2,8 @@
 #include <cstdint>
 #include <array>
 
-enum class DescriptorType
-{
-  kInterruptGate = 14,
-};
+#include "x86_descriptor.hpp"
+
 
 // enum class だと、整数への暗黙変換はできない
 // 通常のenumだと可能（ただし、interruptVector::kXHCIではなく、kXHCIとかけてしまう）
