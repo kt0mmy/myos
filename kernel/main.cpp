@@ -18,6 +18,10 @@
 #include "usb/xhci/xhci.hpp"
 #include "usb/xhci/trb.hpp"
 
+// .bss or .dataセクション
+// プログラムと合わせてkEfiLoaderDataにロードされる 
+alignas(16) uint8_t kernel_main_stack[1024 * 1024]; // 1MB
+
 /**
  * NOTE:
  * echo '#include <array>' > test.cpp
@@ -129,8 +133,12 @@ __attribute__((interrupt)) void IntHandlerXHCI(InterruptFrame *frame)
 }
 
 // NOTE: マングリングを防ぐ
-extern "C" void KernelMain(const FrameBuferConfig &frame_buffer_config, const MemoryMap &memory_map)
+extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_ref, const MemoryMap &memory_map_ref)
 {
+    // 引数で渡されたデータをスタック領域に保持する
+    FrameBuferConfig frame_buffer_config{frame_buffer_config_ref};
+    MemoryMap memory_map{memory_map_ref};
+
     switch (frame_buffer_config.pixel_format)
     {
     case kPixelBGRResv8BitPerColor:
