@@ -10,6 +10,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/BaseMemoryLib.h>
 #include "frame_buffer_config.hpp"
+#include "memory_map.hpp"
 #include "elf.hpp"
 
 #define DEBUG_PRINT_STATUS(status)               \
@@ -35,15 +36,6 @@
             Halt();                     \
         }                               \
     } while (0)
-struct MemoryMap
-{
-    UINTN buffer_size;
-    VOID *buffer;
-    UINTN map_size;
-    UINTN map_key;
-    UINTN descriptor_size;
-    UINT32 descriptor_version;
-};
 
 EFI_STATUS GetMemoryMap(struct MemoryMap *map)
 {
@@ -248,7 +240,7 @@ void CopyLoadSegments(Elf64_Ehdr *ehdr)
         CopyMem((VOID *)phdr[i].p_vaddr, (VOID *)segm_in_file, phdr[i].p_filesz);
 
         UINTN remain_bytes = phdr[i].p_memsz - phdr[i].p_filesz;
-        SetMem((VOID*)(phdr[i].p_vaddr + phdr[i].p_filesz), remain_bytes, 0);
+        SetMem((VOID *)(phdr[i].p_vaddr + phdr[i].p_filesz), remain_bytes, 0);
     }
 }
 
@@ -373,9 +365,9 @@ EFI_STATUS EFIAPI UefiMain(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *system_tab
 
     UINT64 entry_addr = *(UINT64 *)(kernel_first_addr + 24);
 
-    typedef void EntryPointType(const struct FrameBuferConfig *);
+    typedef void EntryPointType(const struct FrameBuferConfig*, const struct MemoryMap *);
     EntryPointType *entry_point = (EntryPointType *)entry_addr;
-    entry_point(&config);
+    entry_point(&config, &memmap);
 
     while (1)
         ;

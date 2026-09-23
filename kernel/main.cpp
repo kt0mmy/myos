@@ -10,6 +10,7 @@
 #include "logger.hpp"
 #include "interrupt.hpp"
 #include "mouse.hpp"
+#include "memory_map.hpp"
 #include "asmfunc.h"
 #include "usb/memory.hpp"
 #include "usb/device.hpp"
@@ -128,7 +129,7 @@ __attribute__((interrupt)) void IntHandlerXHCI(InterruptFrame *frame)
 }
 
 // NOTE: マングリングを防ぐ
-extern "C" void KernelMain(const FrameBuferConfig &frame_buffer_config)
+extern "C" void KernelMain(const FrameBuferConfig &frame_buffer_config, const MemoryMap &memory_map)
 {
     switch (frame_buffer_config.pixel_format)
     {
@@ -163,6 +164,31 @@ extern "C" void KernelMain(const FrameBuferConfig &frame_buffer_config)
 
     console = new (console_buf) Console{*pixel_writer, kDesktopFGColor, kDesktopBGColor};
 
+    const std::array available_memory_types{
+        MemoryType::kEfiBootServicesCode,
+        MemoryType::kEfiBootServicesData,
+        MemoryType::kEfiConventionalMemory,
+    };
+
+    printk("memory_map: %p\n", &memory_map);
+    for (uintptr_t iter = reinterpret_cast<uintptr_t>(memory_map.buffer);
+         iter < reinterpret_cast<uintptr_t>(memory_map.buffer) + memory_map.map_size;
+         iter += memory_map.descriptor_size)
+    {
+        auto desc = reinterpret_cast<MemoryDescriptor *>(iter);
+        for (int i = 0; i < available_memory_types.size(); ++i)
+        {
+            if (desc->type == available_memory_types[i])
+            {
+                printk("type = %u, phys = %08lx - %08lx, pages = %lu, attr = %08lx\n",
+                       desc->type,
+                       desc->physical_start,
+                       desc->physical_start + desc->number_of_pages * 4096 - 1,
+                       desc->number_of_pages,
+                       desc->attribute);
+            }
+        }
+    }
     mouse_cursor = new (mouse_cursor_buf) MouseCursor{
         pixel_writer, kDesktopBGColor, {300, 200}};
 
@@ -269,8 +295,10 @@ extern "C" void KernelMain(const FrameBuferConfig &frame_buffer_config)
                     Log(kError, "Error while ProcessEvent: %s at %s:%d\n", err.Name(), err.File(), err.Line());
                 }
             }
+            break;
         default:
             Log(kError, "Unknown message type: %d\n", msg.type);
+            break;
         }
     }
 
