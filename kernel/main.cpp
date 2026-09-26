@@ -11,6 +11,7 @@
 #include "interrupt.hpp"
 #include "mouse.hpp"
 #include "memory_map.hpp"
+#include "memory_manager.hpp"
 #include "paging.hpp"
 #include "asmfunc.h"
 #include "segment.hpp"
@@ -21,7 +22,7 @@
 #include "usb/xhci/trb.hpp"
 
 // .bss or .dataセクション
-// プログラムと合わせてkEfiLoaderDataにロードされる 
+// プログラムと合わせてkEfiLoaderDataにロードされる
 alignas(16) uint8_t kernel_main_stack[1024 * 1024]; // 1MB
 
 /**
@@ -134,6 +135,9 @@ __attribute__((interrupt)) void IntHandlerXHCI(InterruptFrame *frame)
     NotifyEndOfInterrupt();
 }
 
+char memory_manager_buf[sizeof(BitmapMemoryManager)];
+BitmapMemoryManager *memory_manager;
+
 // NOTE: マングリングを防ぐ
 extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_ref, const MemoryMap &memory_map_ref)
 {
@@ -186,7 +190,35 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
     SetDSAll(0);
     SetCSSS(kernel_cs, kernel_ss);
     SetupIdentityPageTable();
-    
+
+    ::memory_manager = new (memory_manager_buf) BitmapMemoryManager;
+
+    const auto memory_map_base = reinterpret_cast<uintptr_t>(memory_map.buffer);
+    uintptr_t available_end = 0;
+
+    for (uintptr_t iter = memory_map_base; iter < memory_map_base + memory_map.map_size; iter += memory_map.descriptor_size)
+    {
+        auto desc = reinterpret_cast<const MemoryDescriptor *>(iter);
+
+        // 歯抜けパターンの場合、Allocatedにする
+        if (available_end < desc->physical_start)
+        {
+            memory_manager->MarkAllocated(FrameID{available_end / kBytesPerFrame}, (desc->physical_start - available_end) / kBytesPerFrame);
+        }
+
+        const auto physical_end = desc->physical_start + desc->number_of_pages * kUEFIPageSize;
+        if (IsAvailable(static_cast<MemoryType>(desc->type)))
+        {
+            available_end = physical_end;
+        }
+        else
+        {
+            memory_manager->MarkAllocated(
+                FrameID{desc->physical_start / kBytesPerFrame},
+                desc->number_of_pages * kUEFIPageSize / kBytesPerFrame);
+        }
+    }
+    memory_manager->SetMemoryRange(FrameID{1}, FrameID{available_end / kBytesPerFrame});
     printk("memory_map: %p\n", &memory_map);
     for (uintptr_t iter = reinterpret_cast<uintptr_t>(memory_map.buffer);
          iter < reinterpret_cast<uintptr_t>(memory_map.buffer) + memory_map.map_size;
