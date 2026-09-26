@@ -11,6 +11,7 @@
 #include "interrupt.hpp"
 #include "mouse.hpp"
 #include "memory_map.hpp"
+#include "paging.hpp"
 #include "asmfunc.h"
 #include "segment.hpp"
 #include "usb/memory.hpp"
@@ -184,6 +185,7 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
     const uint16_t kernel_ss = 2 << 3;
     SetDSAll(0);
     SetCSSS(kernel_cs, kernel_ss);
+    SetupIdentityPageTable();
     
     printk("memory_map: %p\n", &memory_map);
     for (uintptr_t iter = reinterpret_cast<uintptr_t>(memory_map.buffer);
