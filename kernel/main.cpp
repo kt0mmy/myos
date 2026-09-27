@@ -219,6 +219,11 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
         }
     }
     memory_manager->SetMemoryRange(FrameID{1}, FrameID{available_end / kBytesPerFrame});
+    if (auto err = InitializeHeap(*memory_manager))
+    {
+        Log(kError, "failed to allocate pages: %s at %s:%d\n", err.Name(), err.File(), err.Line());
+        exit(1);
+    }
     printk("memory_map: %p\n", &memory_map);
     for (uintptr_t iter = reinterpret_cast<uintptr_t>(memory_map.buffer);
          iter < reinterpret_cast<uintptr_t>(memory_map.buffer) + memory_map.map_size;

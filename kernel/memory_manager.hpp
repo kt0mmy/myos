@@ -60,3 +60,6 @@ private:
     bool GetBit(FrameID frame);
     void SetBit(FrameID frame, bool allocated);
 };
+
+
+Error InitializeHeap(BitmapMemoryManager &memory_manager);
