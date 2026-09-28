@@ -40,9 +40,6 @@ void WriteString(PixelWriter &writer, int x, int y, const char *s, const PixelCo
 
     for (int i = 0; s[i] != '\0'; i++)
     {
-
-        
-
         if (s[i] == '\n')
         {
             cursor_x = 0;

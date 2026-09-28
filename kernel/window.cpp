@@ -53,6 +53,11 @@ int Window::Height() const
     return height_;
 }
 
+Window::WindowWriter *Window::Writer()
+{
+    return &writer_;
+}
+
 void Window::SetTranparentColor(std::optional<PixelColor> c)
 {
     transparent_color_ = c;

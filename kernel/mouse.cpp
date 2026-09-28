@@ -2,7 +2,6 @@
 
 namespace
 {
-
     const char mouse_cursor_shape[kMouseCursorHeight][kMouseCursorWidth + 1] = {
         "@              ",
         "@@             ",
@@ -28,46 +27,26 @@ namespace
         "@       @.@    ",
         "         @.@   ",
         "         @@@   "};
+}
 
-    void DrawMouseCursor(PixelWriter *pixel_writer, Vector2D<int> position)
+void DrawMouseCursor(PixelWriter *pixel_writer, Vector2D<int> position)
+{
+    for (int dy = 0; dy < kMouseCursorHeight; dy++)
     {
-        for (int dy = 0; dy < kMouseCursorHeight; dy++)
+        for (int dx = 0; dx < kMouseCursorWidth; dx++)
         {
-            for (int dx = 0; dx < kMouseCursorWidth; dx++)
+            if (mouse_cursor_shape[dy][dx] == '@')
             {
-                if (mouse_cursor_shape[dy][dx] == '@')
-                {
-                    pixel_writer->Write(position.x + dx, position.y + dy, {0, 0, 0});
-                }
-                else if (mouse_cursor_shape[dy][dx] == '.')
-                {
-                    pixel_writer->Write(position.x + dx, position.y + dy, {255, 255, 255});
-                }
+                pixel_writer->Write(position.x + dx, position.y + dy, {0, 0, 0});
+            }
+            else if (mouse_cursor_shape[dy][dx] == '.')
+            {
+                pixel_writer->Write(position.x + dx, position.y + dy, {255, 255, 255});
+            }
+            else
+            {
+                pixel_writer->Write(position.x + dx, position.y + dy, kMouseTransparentColor);
             }
         }
     }
-
-    void EraseMouseCursor(PixelWriter *pixel_writer, Vector2D<int> position, PixelColor erase_color)
-    {
-        for (int dy = 0; dy < kMouseCursorHeight; dy++)
-        {
-            for (int dx = 0; dx < kMouseCursorWidth; dx++)
-            {
-                if (mouse_cursor_shape[dy][dx] != ' ')
-                    pixel_writer->Write(position.x + dx, position.y + dy, erase_color);
-            }
-        }
-    }
-}
-
-MouseCursor::MouseCursor(PixelWriter *writer, PixelColor erase_color, Vector2D<int> init_position) : pixel_writer_{writer}, erase_color_{erase_color}, position_{init_position}
-{
-    DrawMouseCursor(pixel_writer_, position_);
-}
-
-void MouseCursor::MoveRelative(Vector2D<int> displacement)
-{
-    EraseMouseCursor(pixel_writer_, position_, erase_color_);
-    position_ += displacement;
-    DrawMouseCursor(pixel_writer_, position_);
 }

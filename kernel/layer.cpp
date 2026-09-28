@@ -153,3 +153,6 @@ Layer *LayerManager::FindLayer(unsigned int id)
         return nullptr;
     return it->get();
 }
+
+
+LayerManager* layer_manager;

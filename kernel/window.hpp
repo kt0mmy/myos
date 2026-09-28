@@ -34,6 +34,8 @@ public:
     int Width() const;
     int Height() const;
 
+    WindowWriter *Writer();
+
     void SetTranparentColor(std::optional<PixelColor> c);
 
 private:
