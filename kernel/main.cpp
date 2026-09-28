@@ -16,6 +16,7 @@
 #include "paging.hpp"
 #include "asmfunc.h"
 #include "segment.hpp"
+#include "timer.hpp"
 #include "usb/memory.hpp"
 #include "usb/device.hpp"
 #include "usb/classdriver/mouse.hpp"
@@ -123,7 +124,11 @@ unsigned int mouse_layer_id;
 void MouseObserver(int8_t displacement_x, int8_t displacement_y)
 {
     layer_manager->MoveRelative(mouse_layer_id, {displacement_x, displacement_y});
+    StartLAPICTimer();
     layer_manager->Draw();
+    auto elapsed = LAPICTimerElapsed();
+    StopLAPICTimer();
+    printk("MouseObserver: elapsed = %u\n", elapsed);
 }
 
 usb::xhci::Controller *xhc;
@@ -152,6 +157,8 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
         pixel_writer = new (pixel_writer_buf) RGBResv8BitPerColorPixelWriter{frame_buffer_config};
         break;
     }
+
+    InitializeLAPICTimer();
 
     const int kFrameWidth = frame_buffer_config.horizontal_resolution;
     const int kFrameHeight = frame_buffer_config.vertical_resolution;
