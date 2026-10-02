@@ -26,6 +26,7 @@ public:
         kInvalidEndpointNumber,
         kAlreadyAllocated,
         kNoPCIMSI,
+        kUnknownPixelFormat,
         kLastOfCode,
     };
 
@@ -70,6 +71,7 @@ private:
         "kInvalidEndpointNumber",
         "kAlreadyAllocated",
         "kNoPCIMSI",
+        "kUnknownPixelFormat",
     };
 
     Code code_;

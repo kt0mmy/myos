@@ -17,6 +17,7 @@
 #include "asmfunc.h"
 #include "segment.hpp"
 #include "timer.hpp"
+#include "shadow_buffer.hpp"
 #include "usb/memory.hpp"
 #include "usb/device.hpp"
 #include "usb/classdriver/mouse.hpp"
@@ -315,18 +316,22 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
         }
     }
 
-    auto bgwindow = std::make_shared<Window>(kFrameWidth, kFrameHeight);
+    auto bgwindow = std::make_shared<Window>(kFrameWidth, kFrameHeight, frame_buffer_config.pixel_format);
     auto bgwriter = bgwindow->Writer();
 
     DrawDesktop(*bgwriter);
     console->SetWriter(bgwriter);
 
-    auto mouse_window = std::make_shared<Window>(kMouseCursorWidth, kMouseCursorHeight);
+    auto mouse_window = std::make_shared<Window>(kMouseCursorWidth, kMouseCursorHeight, frame_buffer_config.pixel_format);
     mouse_window->SetTranparentColor(kMouseTransparentColor);
     DrawMouseCursor(mouse_window->Writer(), {0, 0});
 
+    FrameBuffer screen;
+    if (auto err = screen.Initialize(frame_buffer_config)) {
+        Log(kError, "failed to initialize frame buffer: %s at %s:%d\n", err.Name(), err.File(), err.Line());
+    }
     layer_manager = new LayerManager;
-    layer_manager->SetWriter(pixel_writer);
+    layer_manager->SetWriter(&screen);
 
     auto bglayer_id = layer_manager->NewLayer().SetWindow(bgwindow).Move({0, 0}).ID();
     mouse_layer_id = layer_manager->NewLayer().SetWindow(mouse_window).Move({200, 200}).ID();
