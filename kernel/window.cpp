@@ -35,24 +35,24 @@ void Window::DrawTo(FrameBuffer &screen, Vector2D<int> position)
   {
     for (int dx = 0; dx < Width(); dx++)
     {
-      const auto c = At(dx, dy);
+      const auto c = At({dx, dy});
       if (c != tc)
       {
-        writer.Write(position.x + dx, position.y + dy, c);
+        writer.Write(position + Vector2D<int>{dx, dy}, c);
       }
     }
   }
 }
 
-void Window::Write(int x, int y, PixelColor c)
+void Window::Write(Vector2D<int> pos, PixelColor c)
 {
-  data_[y][x] = c;
-  shadow_buffer_.Writer().Write(x, y, c);
+  data_[pos.y][pos.x] = c;
+  shadow_buffer_.Writer().Write(pos, c);
 }
 
-const PixelColor &Window::At(int x, int y) const
+const PixelColor &Window::At(Vector2D<int> pos) const
 {
-  return data_[y][x];
+  return data_[pos.y][pos.x];
 }
 
 int Window::Width() const

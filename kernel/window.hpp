@@ -16,9 +16,9 @@ public:
     {
     public:
         WindowWriter(Window &window) : window_{window} {}
-        virtual void Write(int x, int y, const PixelColor &c) override
+        virtual void Write(Vector2D<int> pos, const PixelColor &c) override
         {
-            window_.Write(x, y, c);
+            window_.Write(pos, c);
         }
         virtual int Width() const override { return window_.Width(); }
         virtual int Height() const override { return window_.Height(); }
@@ -28,8 +28,8 @@ public:
     };
 
     void DrawTo(FrameBuffer &screen, Vector2D<int> position);
-    void Write(int x, int y, PixelColor c);
-    const PixelColor &At(int x, int y) const;
+    void Write(Vector2D<int> pos, PixelColor c);
+    const PixelColor &At(Vector2D<int> pos) const;
 
     int Width() const;
     int Height() const;
