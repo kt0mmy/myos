@@ -3,6 +3,7 @@
 
 Layer::Layer(unsigned int id) : id_{id} {}
 
+int printk(const char* format, ...);
 unsigned int Layer::ID() const
 {
     return id_;
@@ -29,6 +30,7 @@ Layer &Layer::Move(Vector2D<int> pos)
 Layer &Layer::MoveRelative(Vector2D<int> pos_diff)
 {
     pos_ += pos_diff;
+    printk("%d, %d", pos_.x, pos_.y);
     return *this;
 }
 
@@ -86,7 +88,7 @@ void LayerManager::MoveRelative(unsigned int id, Vector2D<int> pos_diff)
  * ex. Aを指定、new_heightを4以上にした場合
  * erase
  * [B][C][D]
- *  0  1  2  
+ *  0  1  2
  *
  * insert(4 - 1 == end)
  * [B][C][D][A]
@@ -123,7 +125,8 @@ void LayerManager::UpDown(unsigned int id, int new_height)
         return;
     }
 
-    if (new_pos == layer_stack_.end()) {
+    if (new_pos == layer_stack_.end())
+    {
         new_height--;
     }
 
@@ -154,5 +157,4 @@ Layer *LayerManager::FindLayer(unsigned int id)
     return it->get();
 }
 
-
-LayerManager* layer_manager;
+LayerManager *layer_manager;

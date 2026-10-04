@@ -121,15 +121,16 @@ struct Message
 ArrayQueue<Message> *main_queue;
 
 unsigned int mouse_layer_id;
-
+Vector2D<int> screen_size;
+Vector2D<int> mouse_position;
 void MouseObserver(int8_t displacement_x, int8_t displacement_y)
 {
+    auto new_pos = mouse_position + Vector2D<int>{displacement_x, displacement_y};
+    new_pos = ElementMin(new_pos, screen_size + Vector2D<int>{-1, -1});
+    mouse_position = ElementMax(new_pos, {0, 0});
+
     layer_manager->MoveRelative(mouse_layer_id, {displacement_x, displacement_y});
-    StartLAPICTimer();
     layer_manager->Draw();
-    auto elapsed = LAPICTimerElapsed();
-    StopLAPICTimer();
-    printk("MouseObserver: elapsed = %u\n", elapsed);
 }
 
 usb::xhci::Controller *xhc;
@@ -316,6 +317,8 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
         }
     }
 
+    screen_size = Vector2D<int>{static_cast<int>(frame_buffer_config.horizontal_resolution), static_cast<int>(frame_buffer_config.vertical_resolution)};
+
     auto bgwindow = std::make_shared<Window>(kFrameWidth, kFrameHeight, frame_buffer_config.pixel_format);
     auto bgwriter = bgwindow->Writer();
 
@@ -325,9 +328,12 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
     auto mouse_window = std::make_shared<Window>(kMouseCursorWidth, kMouseCursorHeight, frame_buffer_config.pixel_format);
     mouse_window->SetTranparentColor(kMouseTransparentColor);
     DrawMouseCursor(mouse_window->Writer(), {0, 0});
+    mouse_position = {200, 200};
+
 
     FrameBuffer screen;
-    if (auto err = screen.Initialize(frame_buffer_config)) {
+    if (auto err = screen.Initialize(frame_buffer_config))
+    {
         Log(kError, "failed to initialize frame buffer: %s at %s:%d\n", err.Name(), err.File(), err.Line());
     }
     layer_manager = new LayerManager;

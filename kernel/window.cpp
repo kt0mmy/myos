@@ -31,9 +31,10 @@ void Window::DrawTo(FrameBuffer &screen, Vector2D<int> position)
 
   const auto tc = transparent_color_.value();
   auto &writer = screen.Writer();
-  for (int dy = 0; dy < Height(); dy++)
+
+  for (int dy = std::max(0, 0 - position.y); dy < std::min(Height(), writer.Height() - position.y); dy++)
   {
-    for (int dx = 0; dx < Width(); dx++)
+    for (int dx = std::max(0, 0 - position.x); dx < std::min(Width(), writer.Width() - position.x); dx++)
     {
       const auto c = At({dx, dy});
       if (c != tc)
@@ -75,6 +76,7 @@ void Window::SetTranparentColor(std::optional<PixelColor> c)
   transparent_color_ = c;
 }
 
-void Window::Move(Vector2D<int> dst_pos, const Rectangle<int>& src) {
+void Window::Move(Vector2D<int> dst_pos, const Rectangle<int> &src)
+{
   shadow_buffer_.Move(dst_pos, src);
 }
