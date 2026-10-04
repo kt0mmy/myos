@@ -18,6 +18,7 @@
 #include "segment.hpp"
 #include "timer.hpp"
 #include "shadow_buffer.hpp"
+#include "panel.hpp"
 #include "usb/memory.hpp"
 #include "usb/device.hpp"
 #include "usb/classdriver/mouse.hpp"
@@ -329,29 +330,46 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
     mouse_window->SetTranparentColor(kMouseTransparentColor);
     DrawMouseCursor(mouse_window->Writer(), {0, 0});
     mouse_position = {200, 200};
-
+    
+    auto main_window = std::make_shared<Window>(160, 68, frame_buffer_config.pixel_format);
+    DrawPanel(*main_window->Writer(), "Hello Window");
 
     FrameBuffer screen;
     if (auto err = screen.Initialize(frame_buffer_config))
     {
         Log(kError, "failed to initialize frame buffer: %s at %s:%d\n", err.Name(), err.File(), err.Line());
     }
+
     layer_manager = new LayerManager;
     layer_manager->SetWriter(&screen);
 
     auto bglayer_id = layer_manager->NewLayer().SetWindow(bgwindow).Move({0, 0}).ID();
     mouse_layer_id = layer_manager->NewLayer().SetWindow(mouse_window).Move({200, 200}).ID();
+    auto main_window_layer_id = layer_manager->NewLayer()
+                                    .SetWindow(main_window)
+                                    .Move({300, 100})
+                                    .ID();
 
     layer_manager->UpDown(bglayer_id, 0);
     layer_manager->UpDown(mouse_layer_id, 1);
+    layer_manager->UpDown(main_window_layer_id, 1);
     layer_manager->Draw();
+
+    char str[128];
+    unsigned int count = 0;
 
     while (true)
     {
+        ++count;
+        sprintf(str, "%010u", count);
+        FillRectangle(*main_window->Writer(), {24, 28}, {8 * 10, 16}, {0xc6, 0xc6, 0xc6});
+        WriteString(*main_window->Writer(), {24, 28}, str, {0, 0, 0});
+        layer_manager->Draw();
+
         __asm__("cli");
         if (main_queue.Count() == 0)
         {
-            __asm__("sti\nhlt");
+            __asm__("sti");
             continue;
         }
 
