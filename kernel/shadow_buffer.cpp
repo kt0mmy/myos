@@ -35,6 +35,10 @@ namespace
     return config.frame_buffer + BytesPerScanLine(config) * pos.y + BytesPerPixel(config.pixel_format) * pos.x;
   }
 
+  Vector2D<int> FrameBufferSize(const FrameBuferConfig &config)
+  {
+    return {static_cast<int>(config.horizontal_resolution), static_cast<int>(config.vertical_resolution)};
+  }
 }
 
 Error FrameBuffer::Initialize(const FrameBuferConfig &config)
@@ -86,26 +90,20 @@ Error FrameBuffer::Copy(Vector2D<int> pos, const FrameBuffer &src)
   {
     return MAKE_ERROR(Error::kUnknownPixelFormat);
   }
-  const auto dst_width = config_.horizontal_resolution;
-  const auto dst_height = config_.vertical_resolution;
-  const auto src_width = src.config_.horizontal_resolution;
-  const auto src_height = src.config_.vertical_resolution;
 
-  const int copy_start_dst_x = std::max(pos.x, 0);
-  const int copy_start_dst_y = std::max(pos.y, 0);
-  const int copy_end_dst_x = std::min(pos.x + src_width, dst_width);
-  const int copy_end_dst_y = std::min(pos.y + src_height, dst_height);
+  const auto dst_size = FrameBufferSize(config_);
+  const auto src_size = FrameBufferSize(src.config_);
+  const Vector2D<int> dst_start = ElementMax(pos, {0, 0});
+  const Vector2D<int> dst_end = ElementMin(pos + src_size, dst_size);
 
-  const auto bytes_per_copy_line = bytes_per_pixel * (copy_end_dst_x - copy_start_dst_x);
+  uint8_t *dst_buf = FrameAddrAt(dst_start, config_);
+  const uint8_t *src_buf = FrameAddrAt({0, 0}, src.config_);
 
-  uint8_t *dst_buf = config_.frame_buffer + bytes_per_pixel * (config_.pixels_per_scan_line * copy_start_dst_y + copy_start_dst_x);
-  const uint8_t *src_buf = src.config_.frame_buffer;
-
-  for (int dy = 0; dy < copy_end_dst_y - copy_start_dst_y; dy++)
+  for (int dy = dst_start.y; dy < dst_end.y; dy++)
   {
-    memcpy(dst_buf, src_buf, bytes_per_copy_line);
-    dst_buf += bytes_per_pixel * config_.pixels_per_scan_line;
-    src_buf += bytes_per_pixel * src.config_.pixels_per_scan_line;
+    memcpy(dst_buf, src_buf, bytes_per_pixel * (dst_end.x - dst_start.x));
+    dst_buf += BytesPerScanLine(config_);
+    src_buf += BytesPerScanLine(src.config_);
   }
 
   return MAKE_ERROR(Error::kSuccess);
