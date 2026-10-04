@@ -29,6 +29,8 @@ public:
 
     void DrawTo(FrameBuffer &screen, Vector2D<int> position);
     void Write(Vector2D<int> pos, PixelColor c);
+
+    void Move(Vector2D<int> dst_pos, const Rectangle<int>& src);
     const PixelColor &At(Vector2D<int> pos) const;
 
     int Width() const;

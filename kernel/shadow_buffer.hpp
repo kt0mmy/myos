@@ -14,6 +14,7 @@ class FrameBuffer
 public:
     Error Initialize(const FrameBuferConfig &config);
     Error Copy(Vector2D<int> pos, const FrameBuffer &src);
+    void Move(Vector2D<int> pos, const Rectangle<int>& src);
 
     FrameBufferWriter &Writer() { return *writer_; }
 
@@ -22,6 +23,3 @@ private:
     std::vector<uint8_t> buffer_{};
     std::unique_ptr<FrameBufferWriter> writer_{};
 };
-
-
-int BitsPerPixel(PixelFormat pixel_format);
