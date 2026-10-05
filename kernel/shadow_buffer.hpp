@@ -9,14 +9,16 @@
 
 // フレームバッファやそれと同等のシャドウバッファを表す
 // フレームバッファの場合、buffer は使わず、frame
-class FrameBuffer 
+class FrameBuffer
 {
 public:
     Error Initialize(const FrameBuferConfig &config);
     Error Copy(Vector2D<int> pos, const FrameBuffer &src);
-    void Move(Vector2D<int> pos, const Rectangle<int>& src);
+    Error Copy(Vector2D<int> pos, const FrameBuffer &src, const Rectangle<int> &src_area);
+    void Move(Vector2D<int> pos, const Rectangle<int> &src);
 
     FrameBufferWriter &Writer() { return *writer_; }
+    const FrameBuferConfig Config() const;
 
 private:
     FrameBuferConfig config_{};

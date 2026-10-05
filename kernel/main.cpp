@@ -364,7 +364,7 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
         sprintf(str, "%010u", count);
         FillRectangle(*main_window->Writer(), {24, 28}, {8 * 10, 16}, {0xc6, 0xc6, 0xc6});
         WriteString(*main_window->Writer(), {24, 28}, str, {0, 0, 0});
-        layer_manager->Draw();
+        layer_manager->Draw(main_window_layer_id);
 
         __asm__("cli");
         if (main_queue.Count() == 0)

@@ -109,6 +109,44 @@ Error FrameBuffer::Copy(Vector2D<int> pos, const FrameBuffer &src)
   return MAKE_ERROR(Error::kSuccess);
 }
 
+/**
+ * @param pos フレームバッファ座標系における、描画領域の指定位置
+ * @param src 
+ * @param src_area src の座標系における描画領域
+ */
+Error FrameBuffer::Copy(Vector2D<int> pos, const FrameBuffer &src, const Rectangle<int> &src_area)
+{
+  if (config_.pixel_format != src.config_.pixel_format)
+  {
+    return MAKE_ERROR(Error::kUnknownPixelFormat);
+  }
+
+  const auto bytes_per_pixel = BytesPerPixel(config_.pixel_format);
+  if (bytes_per_pixel <= 0)
+  {
+    return MAKE_ERROR(Error::kUnknownPixelFormat);
+  }
+
+  const Rectangle<int> src_area_shifted{pos, src_area.size};
+  const Rectangle<int> src_outline{pos - src_area.pos, FrameBufferSize(src.config_)}; // pos 基準のsrc Rectangle
+  const Rectangle<int> dst_outline{{0, 0}, FrameBufferSize(config_)};
+
+  const auto copy_area = dst_outline & src_outline & src_area_shifted;
+  const auto src_start_pos = copy_area.pos - (pos - src_area.pos);
+
+  uint8_t *dst_buf = FrameAddrAt(copy_area.pos, config_);
+  const uint8_t *src_buf = FrameAddrAt(src_start_pos, src.config_);
+
+  for (int y = 0; y < copy_area.size.y; y++)
+  {
+    memcpy(dst_buf, src_buf, bytes_per_pixel * copy_area.size.x);
+    dst_buf += BytesPerScanLine(config_);
+    src_buf += BytesPerScanLine(src.config_);
+  }
+
+  return MAKE_ERROR(Error::kSuccess);
+}
+
 void FrameBuffer::Move(Vector2D<int> dst_pos, const Rectangle<int> &src)
 {
   const auto bytes_per_pixel = BytesPerPixel(config_.pixel_format);
@@ -138,3 +176,4 @@ void FrameBuffer::Move(Vector2D<int> dst_pos, const Rectangle<int> &src)
     }
   }
 }
+const FrameBuferConfig FrameBuffer::Config() const;

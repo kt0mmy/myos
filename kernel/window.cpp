@@ -21,6 +21,10 @@ Window::Window(int width, int height, PixelFormat shadow_format) : width_{width}
   }
 }
 
+/**
+ * @param screen フレームバッファ
+ * @param position スクリーン座標系における、Windowの描画位置
+ */
 void Window::DrawTo(FrameBuffer &screen, Vector2D<int> position)
 {
   if (!transparent_color_)
@@ -45,6 +49,37 @@ void Window::DrawTo(FrameBuffer &screen, Vector2D<int> position)
   }
 }
 
+/**
+ * @param screen フレームバッファ
+ * @param pos　スクリーン座標系における、window の位置
+ * @param area スクリーン座標系における、描画範囲
+ */
+void Window::DrawTo(FrameBuffer &screen, Vector2D<int> pos, const Rectangle<int> &area) const {
+  if (!transparent_color_) {
+    Rectangle<int> window_area{pos, Size()};
+    Rectangle<int> intersection = area & window_area;
+    screen.Copy(intersection.pos, shadow_buffer_, {intersection.pos - pos, intersection.size});
+    return;
+  }
+
+
+  const auto tc = transparent_color_.value();
+  auto& writer = screen.Writer();
+
+  for (int dy = std::max(0, 0 - pos.y); dy < std::min(Height(), writer.Height() - pos.y); dy++)
+  {
+    for (int dx = std::max(0, 0 - pos.x); dx < std::min(Width(), writer.Width() - pos.x); dx++)
+    {
+      const auto c = At({dx, dy});
+      if (c != tc)
+      {
+        writer.Write(pos+ Vector2D<int>{dx, dy}, c);
+      }
+    }
+  }
+  
+}
+
 void Window::Write(Vector2D<int> pos, PixelColor c)
 {
   data_[pos.y][pos.x] = c;
@@ -64,6 +99,10 @@ int Window::Width() const
 int Window::Height() const
 {
   return height_;
+}
+
+Vector2D<int> Window::Size() const {
+  return {width_, height_};
 }
 
 Window::WindowWriter *Window::Writer()

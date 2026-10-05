@@ -28,13 +28,15 @@ public:
     };
 
     void DrawTo(FrameBuffer &screen, Vector2D<int> position);
+    void DrawTo(FrameBuffer &screen, Vector2D<int> pos, const Rectangle<int> &area) const;
     void Write(Vector2D<int> pos, PixelColor c);
 
-    void Move(Vector2D<int> dst_pos, const Rectangle<int>& src);
+    void Move(Vector2D<int> dst_pos, const Rectangle<int> &src);
     const PixelColor &At(Vector2D<int> pos) const;
 
     int Width() const;
     int Height() const;
+    Vector2D<int> Size() const;
 
     WindowWriter *Writer();
 
