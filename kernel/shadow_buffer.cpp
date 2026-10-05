@@ -111,7 +111,7 @@ Error FrameBuffer::Copy(Vector2D<int> pos, const FrameBuffer &src)
 
 /**
  * @param pos フレームバッファ座標系における、描画領域の指定位置
- * @param src 
+ * @param src
  * @param src_area src の座標系における描画領域
  */
 Error FrameBuffer::Copy(Vector2D<int> pos, const FrameBuffer &src, const Rectangle<int> &src_area)
@@ -176,4 +176,7 @@ void FrameBuffer::Move(Vector2D<int> dst_pos, const Rectangle<int> &src)
     }
   }
 }
-const FrameBuferConfig FrameBuffer::Config() const;
+const FrameBuferConfig FrameBuffer::Config() const
+{
+  return config_;
+}
