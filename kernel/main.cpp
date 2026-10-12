@@ -109,8 +109,7 @@ void SwitchEhci2Xhci(const pci::Device &xhc_dev)
     Log(kDebug, "SwitchEhci2Xhci: SS = %02, xHCI = %02x\n", superspeed_ports, ehci2xhci_ports);
 }
 
-
-std::deque<Message>* main_queue;
+std::deque<Message> *main_queue;
 
 unsigned int mouse_layer_id;
 Vector2D<int> screen_size;
@@ -188,78 +187,10 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
     ::main_queue = new std::deque<Message>(32);
     InitializeInterrupt(main_queue);
 
-    auto err = pci::ScanAllBus();
-    printk("ScanAllBus: %s\n", err.Name());
-
-    for (int i = 0; i < pci::num_device; i++)
-    {
-        const auto &dev = pci::devices[i];
-        auto vendor_id = pci::ReadVendorId(dev.bus, dev.device, dev.function);
-        auto class_code = pci::ReadClassCode(dev.bus, dev.device, dev.function);
-        printk("%d.%d.%d: vend %04x, class %08x, head %02x\n", dev.bus, dev.device, dev.function, vendor_id, class_code, dev.header_type);
-    }
-
-    pci::Device *xhc_dev = nullptr;
-    for (int i = 0; i < pci::num_device; i++)
-    {
-        if (pci::devices[i].class_code.Match(0x0cu, 0x03u, 0x30u))
-        {
-            xhc_dev = &pci::devices[i];
-
-            if (pci::ReadVendorId(*xhc_dev) == 0x8086)
-                break;
-        }
-    }
-
-    if (xhc_dev)
-    {
-        Log(kInfo, "xHC has been found: %d.%d.%d\n", xhc_dev->bus, xhc_dev->device, xhc_dev->function);
-    }
-    else
-    {
-        Log(kError, "xHC has not been found: %d.%d.%d\n", xhc_dev->bus, xhc_dev->device, xhc_dev->function);
-    }
-
-
-    const uint8_t bsp_local_apic_id = *reinterpret_cast<const uint32_t *>(0xfee00020) >> 24;
-    pci::ConfigureMSIFixedDestination(*xhc_dev, bsp_local_apic_id, pci::MSITriggerMode::kLevel, pci::MSIDeliveryMode::kFixed, InterruptVector::kXHCI, 0);
-
-    const WithError<uint64_t> xhc_bar = pci::ReadBar(*xhc_dev, 0);
-    Log(kDebug, "ReadBar: %s\n", xhc_bar.error.Name());
-
-    const uint64_t xhc_mmio_base = xhc_bar.value & ~static_cast<uint64_t>(0xf); // 末尾4ビットはマスクする
-    Log(kDebug, "xHC mmio_base = %08lx\n", xhc_mmio_base);
-
-    usb::xhci::Controller xhc{xhc_mmio_base};
-    if (pci::ReadVendorId(*xhc_dev) == 0x8086)
-    {
-        SwitchEhci2Xhci(*xhc_dev);
-    }
-    {
-        auto err = xhc.Initialize();
-        Log(kDebug, "xhc.Initialize: %s\n", err.Name());
-    }
-
-    Log(kInfo, "xHC starting\n");
-    xhc.Run();
-
-    ::xhc = &xhc;
+    InitializePCI();
+    usb::xhci::Initialize();
 
     usb::HIDMouseDriver::default_observer = MouseObserver;
-    for (int i = 1; i <= xhc.MaxPorts(); i++)
-    {
-        auto port = xhc.PortAt(i);
-        Log(kDebug, "Port %d: IsConnected=%d\n", i, port.IsConnected());
-
-        if (port.IsConnected())
-        {
-            if (auto err = ConfigurePort(xhc, port))
-            {
-                Log(kError, "failed to configure port: %s at %s:%d\n", err.Name(), err.File(), err.Line());
-                continue;
-            }
-        }
-    }
 
     screen_size = Vector2D<int>{static_cast<int>(frame_buffer_config.horizontal_resolution), static_cast<int>(frame_buffer_config.vertical_resolution)};
 
@@ -324,13 +255,7 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
         switch (msg.type)
         {
         case Message::kInterruptXHCI:
-            while (xhc.PrimaryEventRing()->HasFront())
-            {
-                if (auto err = ProcessEvent(xhc))
-                {
-                    Log(kError, "Error while ProcessEvent: %s at %s:%d\n", err.Name(), err.File(), err.Line());
-                }
-            }
+            usb::xhci::ProcessEvents();
             break;
         default:
             Log(kError, "Unknown message type: %d\n", msg.type);
