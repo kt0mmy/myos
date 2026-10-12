@@ -53,6 +53,14 @@ Vector2D<int> Layer::GetPositon() const
     return pos_;
 }
 
+Layer &Layer::SetDraggable(bool draggable)
+{
+    draggable_ = draggable;
+    return *this;
+}
+
+bool Layer::IsDraggable() const { return draggable_; }
+
 Layer &LayerManager::NewLayer()
 {
     latest_id_++;
