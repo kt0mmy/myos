@@ -126,3 +126,5 @@ public:
 void FillRectangle(PixelWriter &writer, const Vector2D<int> &pos, const Vector2D<int> &size, const PixelColor &c);
 void DrawRectangle(PixelWriter &writer, const Vector2D<int> &pos, const Vector2D<int> &size, const PixelColor &c);
 void DrawDesktop(PixelWriter &writer);
+
+void InitializeGraphics(const FrameBuferConfig &screen_config);

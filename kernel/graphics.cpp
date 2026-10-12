@@ -64,3 +64,29 @@ void DrawDesktop(PixelWriter &writer)
                   {30, 30},
                   {160, 160, 160});
 }
+
+FrameBuferConfig screen_config;
+PixelWriter *screen_writer;
+namespace
+{
+    char pixel_writer_buf[sizeof(RGBResv8BitPerColorPixelWriter)];
+}
+
+void InitializeGraphics(const FrameBuferConfig &screen_config)
+{
+    ::screen_config = screen_config;
+
+    switch (screen_config.pixel_format)
+    {
+    case kPixelBGRResv8BitPerColor:
+        ::screen_writer = new (pixel_writer_buf) BGRResv8BitPerColorPixelWriter{screen_config};
+        break;
+    case kPixelRGBResv8BitPerColor:
+        ::screen_writer = new (pixel_writer_buf) RGBResv8BitPerColorPixelWriter{screen_config};
+        break;
+    default:
+        exit(1);
+    }
+
+    DrawDesktop(*screen_writer);
+}

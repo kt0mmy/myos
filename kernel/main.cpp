@@ -177,22 +177,15 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
     FrameBuferConfig frame_buffer_config{frame_buffer_config_ref};
     MemoryMap memory_map{memory_map_ref};
 
-    switch (frame_buffer_config.pixel_format)
-    {
-    case kPixelBGRResv8BitPerColor:
-        pixel_writer = new (pixel_writer_buf) BGRResv8BitPerColorPixelWriter{frame_buffer_config};
-        break;
-    case kPixelRGBResv8BitPerColor:
-        pixel_writer = new (pixel_writer_buf) RGBResv8BitPerColorPixelWriter{frame_buffer_config};
-        break;
-    }
+    InitializeGraphics(frame_buffer_config_ref);
+
+
 
     InitializeLAPICTimer();
 
     const int kFrameWidth = frame_buffer_config.horizontal_resolution;
     const int kFrameHeight = frame_buffer_config.vertical_resolution;
 
-    DrawDesktop(*pixel_writer);
 
     console = new (console_buf) Console{kDesktopFGColor, kDesktopBGColor};
     console->SetWriter(pixel_writer);
