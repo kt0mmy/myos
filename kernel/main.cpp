@@ -114,48 +114,6 @@ std::deque<Message> *main_queue;
 unsigned int mouse_layer_id;
 Vector2D<int> screen_size;
 Vector2D<int> mouse_position;
-void MouseObserver(uint8_t buttons, int8_t displacement_x, int8_t displacement_y)
-{
-    /*
-    ボタンが押されているかどうかを、前の状態として保持する
-    */
-    static unsigned int mouse_drag_layer_id = 0;
-    static uint8_t previous_buttons = 0;
-
-    const auto old_pos = mouse_position;
-    auto new_pos = old_pos + Vector2D<int>{displacement_x, displacement_y};
-    new_pos = ElementMin(new_pos, screen_size + Vector2D<int>{-1, -1});
-    mouse_position = ElementMax(new_pos, {0, 0});
-
-    const auto pos_diff = mouse_position - old_pos;
-    layer_manager->Move(mouse_layer_id, mouse_position);
-
-    const bool previous_left_pressed = (previous_buttons & 0x01);
-    const bool left_pressed = (buttons & 0x01);
-
-    // 初めて押されたとき
-    if (!previous_left_pressed && left_pressed)
-    {
-        auto layer = layer_manager->FindLayerByPosition(mouse_position, mouse_layer_id);
-        if (layer && layer->IsDraggable())
-        {
-            mouse_drag_layer_id = layer->ID();
-        }
-    }
-    else if (previous_left_pressed && left_pressed)
-    {
-        if (mouse_drag_layer_id > 0)
-        {
-            layer_manager->MoveRelative(mouse_drag_layer_id, pos_diff);
-        }
-    }
-    else if (previous_left_pressed && !left_pressed)
-    {
-        mouse_drag_layer_id = 0;
-    }
-
-    previous_buttons = buttons;
-}
 
 
 std::shared_ptr<Window> main_window;
@@ -212,9 +170,7 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
 
     InitializeLayer();
     InitializeMainWindow();
-
-
-    usb::HIDMouseDriver::default_observer = MouseObserver;
+    InitializeMouse();
 
     char str[128];
     unsigned int count = 0;
