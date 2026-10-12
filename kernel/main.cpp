@@ -196,7 +196,6 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
         MemoryType::kEfiConventionalMemory,
     };
 
-    SetupIdentityPageTable();
 
     ::memory_manager = new (memory_manager_buf) BitmapMemoryManager;
 
