@@ -286,9 +286,9 @@ void InitializeLayer()
             .ID()
 
     );
-    
+
+    layer_manager->UpDown(bglayer_id, 0);
     layer_manager->UpDown(console->LayerID(), 1);
-    layer_manager->Draw();
 }
 
 LayerManager *layer_manager;
