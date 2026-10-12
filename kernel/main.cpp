@@ -180,6 +180,11 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
     InitializeGraphics(frame_buffer_config_ref);
     InitializeConsole();
 
+    InitializeSegmentation();
+    InitializePaging();
+    InitializeMemoryManager(memory_map);
+
+
     InitializeLAPICTimer();
 
     const int kFrameWidth = frame_buffer_config.horizontal_resolution;
@@ -191,11 +196,6 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
         MemoryType::kEfiConventionalMemory,
     };
 
-    SetupSegments();
-    const uint16_t kernel_cs = 1 << 3;
-    const uint16_t kernel_ss = 2 << 3;
-    SetDSAll(0);
-    SetCSSS(kernel_cs, kernel_ss);
     SetupIdentityPageTable();
 
     ::memory_manager = new (memory_manager_buf) BitmapMemoryManager;

@@ -7,6 +7,14 @@ namespace
     std::array<SegmentDescriptor, 3> gdt;
 }
 
+void InitializeSegmentation()
+{
+
+    SetupSegments();
+    SetDSAll(kKernelDS);
+    SetCSSS(kKernelCS, kKernelSS);
+}
+
 void SetCodeSegment(SegmentDescriptor &desc, DescriptorType type, unsigned int descriptor_privilege_level, uint32_t base, uint32_t limit)
 {
     desc.data = 0;
