@@ -1,4 +1,5 @@
 #include "timer.hpp"
+#include "interrupt.hpp"
 
 namespace
 {
@@ -14,7 +15,8 @@ namespace
 void InitializeLAPICTimer()
 {
     divide_config = 0b1011;
-    lvt_timer = (0b001 << 16) | 32; // 単発、割り込みを発生させない
+    lvt_timer = (0b010 << 16) | InterruptVector::kLAPICTimer; // 周期的、割り込みを発生させる
+    initial_count = kCountMax;
 }
 
 void StartLAPICTimer()
