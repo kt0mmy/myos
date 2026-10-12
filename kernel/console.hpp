@@ -26,3 +26,7 @@ private:
     char buffer_[kRows][kColumns + 1]; // 画面に表示している内容をバッファとして保持
     int cursor_row_, cursor_column_;
 };
+
+extern Console* console;
+
+void InitializeConsole();

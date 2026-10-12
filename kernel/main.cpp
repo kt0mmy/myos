@@ -178,17 +178,12 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
     MemoryMap memory_map{memory_map_ref};
 
     InitializeGraphics(frame_buffer_config_ref);
-
-
+    InitializeConsole();
 
     InitializeLAPICTimer();
 
     const int kFrameWidth = frame_buffer_config.horizontal_resolution;
     const int kFrameHeight = frame_buffer_config.vertical_resolution;
-
-
-    console = new (console_buf) Console{kDesktopFGColor, kDesktopBGColor};
-    console->SetWriter(pixel_writer);
 
     const std::array available_memory_types{
         MemoryType::kEfiBootServicesCode,
