@@ -1,0 +1,44 @@
+usb/xhci/xhci.o: usb/xhci/xhci.cpp usb/xhci/xhci.hpp error.hpp \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/array \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/__config \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/__tuple \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/cstddef \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/version \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/type_traits \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/utility \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/initializer_list \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/cstring \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/string.h \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/cstdint \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/stdint.h \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/__debug \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/iterator \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/iosfwd \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/wchar.h \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/__functional_base \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/typeinfo \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/exception \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/cstdlib \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/stdlib.h \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/new \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/algorithm \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/memory \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/limits \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/tuple \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/stdexcept \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/cassert \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/assert.h \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/_ansi.h \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/functional \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/bit \
+  usb/xhci/registers.hpp register.hpp usb/xhci/context.hpp \
+  usb/endpoint.hpp usb/xhci/ring.hpp \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/vector \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/__bit_reference \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/climits \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/limits.h \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/__split_buffer \
+  usb/memory.hpp usb/xhci/trb.hpp usb/xhci/port.hpp usb/xhci/devmgr.hpp \
+  usb/xhci/device.hpp usb/device.hpp usb/setupdata.hpp usb/arraymap.hpp \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/optional \
+  logger.hpp usb/descriptor.hpp usb/xhci/speed.hpp

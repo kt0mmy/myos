@@ -1,0 +1,37 @@
+usb/classdriver/keyboard.o: usb/classdriver/keyboard.cpp usb/classdriver/keyboard.hpp \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/functional \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/__config \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/type_traits \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/cstddef \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/version \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/typeinfo \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/exception \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/cstdlib \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/stdlib.h \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/cstdint \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/stdint.h \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/memory \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/new \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/utility \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/__tuple \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/initializer_list \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/cstring \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/string.h \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/__debug \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/limits \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/iterator \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/iosfwd \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/wchar.h \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/__functional_base \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/tuple \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/stdexcept \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/cassert \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/assert.h \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/_ansi.h \
+  usb/classdriver/hid.hpp usb/classdriver/base.hpp error.hpp \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/array \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/algorithm \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/bit \
+  usb/endpoint.hpp usb/setupdata.hpp usb/memory.hpp usb/device.hpp \
+  usb/arraymap.hpp \
+  /home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1/optional
