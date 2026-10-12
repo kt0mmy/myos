@@ -2,7 +2,6 @@
 #include <cstddef>
 #include <cstdio>
 #include <deque>
-#include "queue.hpp"
 #include "frame_buffer_config.hpp"
 #include "graphics.hpp"
 #include "font.hpp"
@@ -30,49 +29,7 @@
 // プログラムと合わせてkEfiLoaderDataにロードされる
 alignas(16) uint8_t kernel_main_stack[1024 * 1024]; // 1MB
 
-/**
- * NOTE:
- * echo '#include <array>' > test.cpp
- * clang++ -H -I/home/t0mmy/osbook/devenv/x86_64-elf/include/c++/v1 --target=x86_64-elf -std=c++17 -c test.cpp 2>&1
- *
- * array→iterator→__functional_base→typeinfo/exception→new という依存関係がある。
- * したがって配置newは不要
- *
- */
-void operator delete(void *obj) noexcept {}
-
-/**
- * @retval 0   成功
- * @retval 非0 失敗
- */
-int WritePixel(const FrameBuferConfig &config, int x, int y, const PixelColor &c)
-{
-    const int pixel_position = config.pixels_per_scan_line * y + x;
-    uint8_t *p = &config.frame_buffer[4 * pixel_position];
-
-    if (config.pixel_format == kPixelBGRResv8BitPerColor)
-    {
-        p[0] = c.b;
-        p[1] = c.g;
-        p[2] = c.r;
-    }
-    else if (config.pixel_format == kPixelRGBResv8BitPerColor)
-    {
-        p[0] = c.r;
-        p[1] = c.g;
-        p[2] = c.b;
-    }
-    else
-    {
-        return -1;
-    }
-
-    return 0;
-}
-
-// class のサイズ？
-char pixel_writer_buf[sizeof(RGBResv8BitPerColorPixelWriter)];
-PixelWriter *pixel_writer;
+std::deque<Message> *main_queue;
 
 int printk(const char *format, ...)
 {
@@ -88,60 +45,28 @@ int printk(const char *format, ...)
     return result;
 }
 
-void SwitchEhci2Xhci(const pci::Device &xhc_dev)
-{
-    bool intel_ehc_exist = false;
-    for (int i = 0; i < pci::num_device; i++)
-    {
-        intel_ehc_exist = pci::devices[i].class_code.Match(0x0cu, 0x03u, 0x20u) && pci::ReadVendorId(pci::devices[i]) == 0x8086;
-        if (intel_ehc_exist)
-            break;
-    }
-
-    if (!intel_ehc_exist)
-        return;
-
-    uint32_t superspeed_ports = pci::ReadConfReg(xhc_dev, 0xdc);
-    pci::WriteConfReg(xhc_dev, 0xd8, superspeed_ports);
-
-    uint32_t ehci2xhci_ports = pci::ReadConfReg(xhc_dev, 0xd4);
-    pci::WriteConfReg(xhc_dev, 0xd0, ehci2xhci_ports);
-    Log(kDebug, "SwitchEhci2Xhci: SS = %02, xHCI = %02x\n", superspeed_ports, ehci2xhci_ports);
-}
-
-std::deque<Message> *main_queue;
-
-unsigned int mouse_layer_id;
-Vector2D<int> screen_size;
-Vector2D<int> mouse_position;
-
-
 std::shared_ptr<Window> main_window;
 unsigned int main_window_layer_id;
 
-usb::xhci::Controller *xhc;
-
-
-void InitializeMainWindow() {
+void InitializeMainWindow()
+{
     main_window = std::make_shared<Window>(
-        160, 52, screen_config.pixel_format
-    );
+        160, 52, screen_config.pixel_format);
 
     DrawPanel(*main_window->Writer(), "Hello Window");
     main_window_layer_id = layer_manager->NewLayer()
-        .SetWindow(main_window)
-        .SetDraggable(true)
-        .Move({300, 100})
-        .ID();
+                               .SetWindow(main_window)
+                               .SetDraggable(true)
+                               .Move({300, 100})
+                               .ID();
 
-        layer_manager->UpDown(main_window_layer_id, std::numeric_limits<int>::max());
+    layer_manager->UpDown(main_window_layer_id, std::numeric_limits<int>::max());
 }
 
 // NOTE: マングリングを防ぐ
 extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_ref, const MemoryMap &memory_map_ref)
 {
     // 引数で渡されたデータをスタック領域に保持する
-    FrameBuferConfig frame_buffer_config{frame_buffer_config_ref};
     MemoryMap memory_map{memory_map_ref};
 
     InitializeGraphics(frame_buffer_config_ref);
@@ -153,15 +78,6 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
 
     InitializeLAPICTimer();
 
-    const int kFrameWidth = frame_buffer_config.horizontal_resolution;
-    const int kFrameHeight = frame_buffer_config.vertical_resolution;
-
-    const std::array available_memory_types{
-        MemoryType::kEfiBootServicesCode,
-        MemoryType::kEfiBootServicesData,
-        MemoryType::kEfiConventionalMemory,
-    };
-
     ::main_queue = new std::deque<Message>(32);
     InitializeInterrupt(main_queue);
 
@@ -171,6 +87,8 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
     InitializeLayer();
     InitializeMainWindow();
     InitializeMouse();
+
+    layer_manager->Draw({{0, 0}, ScreenSize()});
 
     char str[128];
     unsigned int count = 0;
