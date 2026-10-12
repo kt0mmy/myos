@@ -3,6 +3,7 @@
 #include <limits>
 #include <array>
 #include "error.hpp"
+#include "memory_map.hpp"
 
 namespace
 {
@@ -61,5 +62,4 @@ private:
     void SetBit(FrameID frame, bool allocated);
 };
 
-
-Error InitializeHeap(BitmapMemoryManager &memory_manager);
+void InitializeMemoryManager(const MemoryMap& memory_map);

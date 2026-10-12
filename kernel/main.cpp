@@ -73,9 +73,6 @@ int WritePixel(const FrameBuferConfig &config, int x, int y, const PixelColor &c
 char pixel_writer_buf[sizeof(RGBResv8BitPerColorPixelWriter)];
 PixelWriter *pixel_writer;
 
-char console_buf[sizeof(Console)];
-Console *console;
-
 int printk(const char *format, ...)
 {
     va_list ap;
@@ -144,16 +141,23 @@ void MouseObserver(uint8_t buttons, int8_t displacement_x, int8_t displacement_y
     const bool left_pressed = (buttons & 0x01);
 
     // 初めて押されたとき
-    if (!previous_left_pressed && left_pressed) {
+    if (!previous_left_pressed && left_pressed)
+    {
         auto layer = layer_manager->FindLayerByPosition(mouse_position, mouse_layer_id);
-        if (layer && layer->IsDraggable()) {
+        if (layer && layer->IsDraggable())
+        {
             mouse_drag_layer_id = layer->ID();
         }
-    } else if (previous_left_pressed && left_pressed) {
-        if (mouse_drag_layer_id > 0) {
+    }
+    else if (previous_left_pressed && left_pressed)
+    {
+        if (mouse_drag_layer_id > 0)
+        {
             layer_manager->MoveRelative(mouse_drag_layer_id, pos_diff);
         }
-    } else if (previous_left_pressed && !left_pressed) {
+    }
+    else if (previous_left_pressed && !left_pressed)
+    {
         mouse_drag_layer_id = 0;
     }
 
@@ -166,9 +170,6 @@ __attribute__((interrupt)) void IntHandlerXHCI(InterruptFrame *frame)
     main_queue->Push(Message{Message::kInterruptXHCI});
     NotifyEndOfInterrupt();
 }
-
-char memory_manager_buf[sizeof(BitmapMemoryManager)];
-BitmapMemoryManager *memory_manager;
 
 // NOTE: マングリングを防ぐ
 extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_ref, const MemoryMap &memory_map_ref)
@@ -184,7 +185,6 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
     InitializePaging();
     InitializeMemoryManager(memory_map);
 
-
     InitializeLAPICTimer();
 
     const int kFrameWidth = frame_buffer_config.horizontal_resolution;
@@ -195,41 +195,6 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
         MemoryType::kEfiBootServicesData,
         MemoryType::kEfiConventionalMemory,
     };
-
-
-    ::memory_manager = new (memory_manager_buf) BitmapMemoryManager;
-
-    const auto memory_map_base = reinterpret_cast<uintptr_t>(memory_map.buffer);
-    uintptr_t available_end = 0;
-
-    for (uintptr_t iter = memory_map_base; iter < memory_map_base + memory_map.map_size; iter += memory_map.descriptor_size)
-    {
-        auto desc = reinterpret_cast<const MemoryDescriptor *>(iter);
-
-        // 歯抜けパターンの場合、Allocatedにする
-        if (available_end < desc->physical_start)
-        {
-            memory_manager->MarkAllocated(FrameID{available_end / kBytesPerFrame}, (desc->physical_start - available_end) / kBytesPerFrame);
-        }
-
-        const auto physical_end = desc->physical_start + desc->number_of_pages * kUEFIPageSize;
-        if (IsAvailable(static_cast<MemoryType>(desc->type)))
-        {
-            available_end = physical_end;
-        }
-        else
-        {
-            memory_manager->MarkAllocated(
-                FrameID{desc->physical_start / kBytesPerFrame},
-                desc->number_of_pages * kUEFIPageSize / kBytesPerFrame);
-        }
-    }
-    memory_manager->SetMemoryRange(FrameID{1}, FrameID{available_end / kBytesPerFrame});
-    if (auto err = InitializeHeap(*memory_manager))
-    {
-        Log(kError, "failed to allocate pages: %s at %s:%d\n", err.Name(), err.File(), err.Line());
-        exit(1);
-    }
 
     printk("memory_map: %p\n", &memory_map);
     for (uintptr_t iter = reinterpret_cast<uintptr_t>(memory_map.buffer);
@@ -343,7 +308,7 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
     mouse_window->SetTranparentColor(kMouseTransparentColor);
     DrawMouseCursor(mouse_window->Writer(), {0, 0});
     mouse_position = {200, 200};
-    
+
     auto main_window = std::make_shared<Window>(160, 68, frame_buffer_config.pixel_format);
     DrawPanel(*main_window->Writer(), "Hello Window");
 
