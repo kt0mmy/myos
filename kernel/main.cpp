@@ -163,6 +163,22 @@ unsigned int main_window_layer_id;
 
 usb::xhci::Controller *xhc;
 
+
+void InitializeMainWindow() {
+    main_window = std::make_shared<Window>(
+        160, 52, screen_config.pixel_format
+    );
+
+    DrawPanel(*main_window->Writer(), "Hello Window");
+    main_window_layer_id = layer_manager->NewLayer()
+        .SetWindow(main_window)
+        .SetDraggable(true)
+        .Move({300, 100})
+        .ID();
+
+        layer_manager->UpDown(main_window_layer_id, std::numeric_limits<int>::max());
+}
+
 // NOTE: マングリングを防ぐ
 extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_ref, const MemoryMap &memory_map_ref)
 {
@@ -195,6 +211,7 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
     usb::xhci::Initialize();
 
     InitializeLayer();
+    InitializeMainWindow();
 
 
     usb::HIDMouseDriver::default_observer = MouseObserver;
