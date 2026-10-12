@@ -90,3 +90,11 @@ void InitializeGraphics(const FrameBuferConfig &screen_config)
 
     DrawDesktop(*screen_writer);
 }
+
+Vector2D<int> ScreenSize()
+{
+    return {
+        static_cast<int>(screen_config.horizontal_resolution),
+        static_cast<int>(screen_config.vertical_resolution),
+    };
+}

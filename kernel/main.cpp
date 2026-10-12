@@ -157,6 +157,10 @@ void MouseObserver(uint8_t buttons, int8_t displacement_x, int8_t displacement_y
     previous_buttons = buttons;
 }
 
+
+std::shared_ptr<Window> main_window;
+unsigned int main_window_layer_id;
+
 usb::xhci::Controller *xhc;
 
 // NOTE: マングリングを防ぐ
@@ -190,45 +194,10 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
     InitializePCI();
     usb::xhci::Initialize();
 
+    InitializeLayer();
+
+
     usb::HIDMouseDriver::default_observer = MouseObserver;
-
-    screen_size = Vector2D<int>{static_cast<int>(frame_buffer_config.horizontal_resolution), static_cast<int>(frame_buffer_config.vertical_resolution)};
-
-    auto bgwindow = std::make_shared<Window>(kFrameWidth, kFrameHeight, frame_buffer_config.pixel_format);
-    auto bgwriter = bgwindow->Writer();
-
-    DrawDesktop(*bgwriter);
-    console->SetWindow(bgwindow);
-
-    auto mouse_window = std::make_shared<Window>(kMouseCursorWidth, kMouseCursorHeight, frame_buffer_config.pixel_format);
-    mouse_window->SetTranparentColor(kMouseTransparentColor);
-    DrawMouseCursor(mouse_window->Writer(), {0, 0});
-    mouse_position = {200, 200};
-
-    auto main_window = std::make_shared<Window>(160, 68, frame_buffer_config.pixel_format);
-    DrawPanel(*main_window->Writer(), "Hello Window");
-
-    FrameBuffer screen;
-    if (auto err = screen.Initialize(frame_buffer_config))
-    {
-        Log(kError, "failed to initialize frame buffer: %s at %s:%d\n", err.Name(), err.File(), err.Line());
-    }
-
-    layer_manager = new LayerManager;
-    layer_manager->SetWriter(&screen);
-
-    auto bglayer_id = layer_manager->NewLayer().SetWindow(bgwindow).Move({0, 0}).ID();
-    mouse_layer_id = layer_manager->NewLayer().SetWindow(mouse_window).Move({200, 200}).ID();
-    auto main_window_layer_id = layer_manager->NewLayer()
-                                    .SetWindow(main_window)
-                                    .Move({300, 100})
-                                    .SetDraggable(true)
-                                    .ID();
-
-    layer_manager->UpDown(bglayer_id, 0);
-    layer_manager->UpDown(mouse_layer_id, 1);
-    layer_manager->UpDown(main_window_layer_id, 1);
-    layer_manager->Draw();
 
     char str[128];
     unsigned int count = 0;

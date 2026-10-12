@@ -62,4 +62,6 @@ private:
     Layer *FindLayer(unsigned int id);
 };
 
+void InitializeLayer();
+
 extern LayerManager *layer_manager;

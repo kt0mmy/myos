@@ -1,4 +1,7 @@
 #include "layer.hpp"
+#include "graphics.hpp"
+#include "logger.hpp"
+#include "console.hpp"
 #include <algorithm>
 
 Layer::Layer(unsigned int id) : id_{id} {}
@@ -246,6 +249,46 @@ void LayerManager::Draw(unsigned int id) const
     }
 
     screen_->Copy(window_area.pos, back_buffer_, window_area);
+}
+
+namespace
+{
+    FrameBuffer *screen;
+}
+
+void InitializeLayer()
+{
+    const auto screen_size = ScreenSize();
+
+    auto bgwindow = std::make_shared<Window>(screen_size.x, screen_size.y, screen_config.pixel_format);
+    DrawDesktop(*bgwindow->Writer());
+
+    auto console_window = std::make_shared<Window>(Console::kColumns * 8, Console::kRows * 16, screen_config.pixel_format);
+    console->SetWindow(console_window);
+
+    screen = new FrameBuffer;
+
+    if (auto err = screen->Initialize(screen_config))
+    {
+        Log(kError, "failed to initialize frame buffer: %s at %s:%d\n", err.Name(), err.File(), err.Line());
+        exit(1);
+    }
+
+    layer_manager = new LayerManager;
+    layer_manager->SetWriter(screen);
+
+    auto bglayer_id = layer_manager->NewLayer().SetWindow(bgwindow).Move({0, 0}).ID();
+    console->SetLayerID(
+        layer_manager->NewLayer()
+            .SetWindow(console_window)
+            .Move({0, 0})
+            .SetDraggable(true)
+            .ID()
+
+    );
+    
+    layer_manager->UpDown(console->LayerID(), 1);
+    layer_manager->Draw();
 }
 
 LayerManager *layer_manager;
