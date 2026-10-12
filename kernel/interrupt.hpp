@@ -1,9 +1,10 @@
 #pragma once
 #include <cstdint>
 #include <array>
+#include <deque>
 
 #include "x86_descriptor.hpp"
-
+#include "message.hpp"
 
 // enum class だと、整数への暗黙変換はできない
 // 通常のenumだと可能（ただし、interruptVector::kXHCIではなく、kXHCIとかけてしまう）
@@ -53,6 +54,8 @@ struct InterruptFrame
 };
 
 void NotifyEndOfInterrupt();
+void InitializeInterrupt(std::deque<Message> *msg_queue);
+
 void SetIDTEntry(InterruptDescriptor &desc, InterruptDescriptorAttribute attr, uint64_t offset, uint16_t segment_selector);
 
 constexpr InterruptDescriptorAttribute MakeIDTAttr(DescriptorType type, uint8_t descriptor_privilege_level, bool present = true, uint8_t interrupt_stack_table = 0)

@@ -1,6 +1,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <cstdio>
+#include <deque>
 #include "queue.hpp"
 #include "frame_buffer_config.hpp"
 #include "graphics.hpp"
@@ -108,15 +109,8 @@ void SwitchEhci2Xhci(const pci::Device &xhc_dev)
     Log(kDebug, "SwitchEhci2Xhci: SS = %02, xHCI = %02x\n", superspeed_ports, ehci2xhci_ports);
 }
 
-struct Message
-{
-    enum Type
-    {
-        kInterruptXHCI,
-    } type;
-};
 
-ArrayQueue<Message> *main_queue;
+std::deque<Message>* main_queue;
 
 unsigned int mouse_layer_id;
 Vector2D<int> screen_size;
@@ -165,11 +159,6 @@ void MouseObserver(uint8_t buttons, int8_t displacement_x, int8_t displacement_y
 }
 
 usb::xhci::Controller *xhc;
-__attribute__((interrupt)) void IntHandlerXHCI(InterruptFrame *frame)
-{
-    main_queue->Push(Message{Message::kInterruptXHCI});
-    NotifyEndOfInterrupt();
-}
 
 // NOTE: マングリングを防ぐ
 extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_ref, const MemoryMap &memory_map_ref)
@@ -196,29 +185,8 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
         MemoryType::kEfiConventionalMemory,
     };
 
-    printk("memory_map: %p\n", &memory_map);
-    for (uintptr_t iter = reinterpret_cast<uintptr_t>(memory_map.buffer);
-         iter < reinterpret_cast<uintptr_t>(memory_map.buffer) + memory_map.map_size;
-         iter += memory_map.descriptor_size)
-    {
-        auto desc = reinterpret_cast<MemoryDescriptor *>(iter);
-        for (int i = 0; i < available_memory_types.size(); ++i)
-        {
-            if (desc->type == available_memory_types[i])
-            {
-                printk("type = %u, phys = %08lx - %08lx, pages = %lu, attr = %08lx\n",
-                       desc->type,
-                       desc->physical_start,
-                       desc->physical_start + desc->number_of_pages * 4096 - 1,
-                       desc->number_of_pages,
-                       desc->attribute);
-            }
-        }
-    }
-
-    std::array<Message, 32> main_queue_data;
-    ArrayQueue<Message> main_queue{main_queue_data};
-    ::main_queue = &main_queue;
+    ::main_queue = new std::deque<Message>(32);
+    InitializeInterrupt(main_queue);
 
     auto err = pci::ScanAllBus();
     printk("ScanAllBus: %s\n", err.Name());
@@ -252,9 +220,6 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
         Log(kError, "xHC has not been found: %d.%d.%d\n", xhc_dev->bus, xhc_dev->device, xhc_dev->function);
     }
 
-    const uint16_t cs = GetCS();
-    SetIDTEntry(idt[InterruptVector::kXHCI], MakeIDTAttr(DescriptorType::kInterruptGate, 0), reinterpret_cast<uint64_t>(IntHandlerXHCI), cs);
-    LoadIDT(sizeof(idt) - 1, reinterpret_cast<uintptr_t>(&idt[0]));
 
     const uint8_t bsp_local_apic_id = *reinterpret_cast<const uint32_t *>(0xfee00020) >> 24;
     pci::ConfigureMSIFixedDestination(*xhc_dev, bsp_local_apic_id, pci::MSITriggerMode::kLevel, pci::MSIDeliveryMode::kFixed, InterruptVector::kXHCI, 0);
@@ -346,14 +311,14 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
         layer_manager->Draw(main_window_layer_id);
 
         __asm__("cli");
-        if (main_queue.Count() == 0)
+        if (main_queue->size() == 0)
         {
             __asm__("sti");
             continue;
         }
 
-        Message msg = main_queue.Front();
-        main_queue.Pop();
+        Message msg = main_queue->front();
+        main_queue->pop_front();
         __asm__("sti");
 
         switch (msg.type)
