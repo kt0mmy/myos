@@ -1,6 +1,7 @@
 #include "interrupt.hpp"
 #include "asmfunc.h"
 #include "segment.hpp"
+#include "timer.hpp"
 
 // NOTE: 割り込みを発生させる側の仕組み
 
@@ -18,7 +19,7 @@ namespace
 
     __attribute__((interrupt)) void IntHandlerLAPICTimer(InterruptFrame *frame)
     {
-        msg_queue->push_back(Message{Message::kInterruptLAPICTimer});
+        LAPICTimerOnInterrupt();
         NotifyEndOfInterrupt();
     }
 } // namespace

@@ -12,11 +12,15 @@ namespace
     volatile uint32_t &divide_config = *reinterpret_cast<uint32_t *>(0xfee003e0); // カウンタの減り度合いを制御
 }
 
+TimerManager* timer_manager;
+
 void InitializeLAPICTimer()
 {
+    timer_manager = new TimerManager;
+
     divide_config = 0b1011;
     lvt_timer = (0b010 << 16) | InterruptVector::kLAPICTimer; // 周期的、割り込みを発生させる
-    initial_count = kCountMax;
+    initial_count = 0x1000000u;
 }
 
 void StartLAPICTimer()
@@ -33,3 +37,12 @@ void StopLAPICTimer()
 {
     initial_count = 0;
 }
+
+void LAPICTimerOnInterrupt() {
+    timer_manager->Tick();
+}
+
+void TimerManager::Tick() {
+    tick_++;
+}
+
