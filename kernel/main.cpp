@@ -19,6 +19,7 @@
 #include "timer.hpp"
 #include "shadow_buffer.hpp"
 #include "panel.hpp"
+#include "acpi.hpp"
 #include "usb/memory.hpp"
 #include "usb/device.hpp"
 #include "usb/classdriver/mouse.hpp"
@@ -64,7 +65,7 @@ void InitializeMainWindow()
 }
 
 // NOTE: マングリングを防ぐ
-extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_ref, const MemoryMap &memory_map_ref)
+extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_ref, const MemoryMap &memory_map_ref, const acpi::RSDP &rsdp)
 {
     // 引数で渡されたデータをスタック領域に保持する
     MemoryMap memory_map{memory_map_ref};
@@ -88,6 +89,7 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
 
     layer_manager->Draw({{0, 0}, ScreenSize()});
 
+    acpi::Initialize(rsdp);
     InitializeLAPICTimer(*main_queue);
     timer_manager->AddTimer(Timer(200, 2));
     timer_manager->AddTimer(Timer(600, -1));
