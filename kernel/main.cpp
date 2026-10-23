@@ -65,6 +65,47 @@ void InitializeMainWindow()
     layer_manager->UpDown(main_window_layer_id, std::numeric_limits<int>::max());
 }
 
+std::shared_ptr<Window> text_window;
+unsigned int text_window_layer_id;
+void InitializeTextWindow()
+{
+    const int win_w = 160;
+    const int win_h = 52;
+
+    text_window = std::make_shared<Window>(win_w, win_h, screen_config.pixel_format);
+    DrawPanel(*text_window->Writer(), "Text Box Test");
+    DrawTextbox(*text_window->Writer(), {4, 24}, {win_w - 8, win_h - 24 - 4});
+
+    text_window_layer_id = layer_manager->NewLayer()
+                               .SetWindow(text_window)
+                               .SetDraggable(true)
+                               .Move({340, 200})
+                               .ID();
+
+    layer_manager->UpDown(text_window_layer_id, std::numeric_limits<int>::max());
+}
+
+int text_window_index;
+void InputTextWindow(char c)
+{
+    if (c == 0)
+        return;
+
+    auto pos = []()
+    { return Vector2D<int>{8 + 8 * text_window_index, 24 + 6}; };
+
+    const int max_chars = (text_window->Width() - 16) / 8;
+    if (c == '\b' && text_window_index > 0) { // backspace
+        --text_window_index;
+        FillRectangle(*text_window->Writer(), pos(), {8, 16}, ToColor(0xffffff));
+    } else if (c >= ' ' && text_window_index < max_chars) {
+        WriteAscii(*text_window->Writer(), pos(), c, ToColor(0));
+        ++text_window_index;
+    }
+
+    layer_manager->Draw(text_window_layer_id);
+}
+
 // NOTE: マングリングを防ぐ
 extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_ref, const MemoryMap &memory_map_ref, const acpi::RSDP &rsdp)
 {
@@ -86,10 +127,12 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
 
     InitializeLayer();
     InitializeMainWindow();
+    InitializeTextWindow();
     InitializeMouse();
-    InitializeKeyboard(*main_queue);
 
     layer_manager->Draw({{0, 0}, ScreenSize()});
+
+    InitializeKeyboard(*main_queue);
 
     acpi::Initialize(rsdp);
     InitializeLAPICTimer(*main_queue);
@@ -128,10 +171,7 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
         case Message::kTimerTimeout:
             break;
         case Message::kKeyPush:
-            if (msg.arg.keyboard.ascii != 0)
-            {
-                printk("%c", msg.arg.keyboard.ascii);
-            }
+            InputTextWindow(msg.arg.keyboard.ascii);
             break;
         default:
             Log(kError, "Unknown message type: %d\n", msg.type);

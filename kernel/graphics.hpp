@@ -63,6 +63,15 @@ inline bool operator!=(const PixelColor &lhs, const PixelColor &rhs)
     return !(lhs == rhs);
 }
 
+constexpr PixelColor ToColor(uint32_t c)
+{
+    return {
+        static_cast<uint8_t>((c >> 16) & 0xff),
+        static_cast<uint8_t>((c >> 8) & 0xff),
+        static_cast<uint8_t>(c & 0xff),
+    };
+}
+
 template <typename T, typename U>
 Rectangle<T> operator&(const Rectangle<T> &lhs, const Rectangle<U> &rhs)
 {
