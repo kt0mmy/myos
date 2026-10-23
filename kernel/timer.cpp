@@ -1,5 +1,7 @@
 #include "timer.hpp"
 #include "interrupt.hpp"
+#include "acpi.hpp"
+#include <limits>
 
 namespace
 {
@@ -12,6 +14,7 @@ namespace
     volatile uint32_t &divide_config = *reinterpret_cast<uint32_t *>(0xfee003e0); // カウンタの減り度合いを制御
 }
 
+unsigned long lapic_timer_freq;
 TimerManager *timer_manager;
 
 void InitializeLAPICTimer(std::deque<Message> &msg_queue)
@@ -19,8 +22,20 @@ void InitializeLAPICTimer(std::deque<Message> &msg_queue)
     timer_manager = new TimerManager(msg_queue);
 
     divide_config = 0b1011;
-    lvt_timer = (0b010 << 16) | InterruptVector::kLAPICTimer; // 周期的、割り込みを発生させる
-    initial_count = 0x1000000u;
+    lvt_timer = 0b001 << 16; // 割り込みなし、単発
+
+    // 100msでLAPICタイマが何回カウントされたか
+    StartLAPICTimer();
+    acpi::WaitMilliseconds(100);
+    const auto elapsed = LAPICTimerElapsed();
+    StopLAPICTimer();
+
+    lapic_timer_freq = static_cast<unsigned long>(elapsed) * 10;
+
+    divide_config = 0b1011;
+    lvt_timer = (0b010 << 16) | InterruptVector::kLAPICTimer; // 割り込みあり、周期的
+    initial_count = lapic_timer_freq / kTimerFreq;
+    
 }
 
 void StartLAPICTimer()

@@ -47,13 +47,16 @@ namespace acpi
         DescriptionHeader header;
 
         char reserved1[76 - sizeof(header)];
-        uint32_t pm_tmr_blk;
+        uint32_t pm_tmr_blk; // IO ポート番号（ACPI PM タイマのカウント値）
         char reserved2[112 - 80];
         uint32_t flags;
         char reserved3[276 - 116];
     } __attribute__((packed));
 
     void Initialize(const RSDP &rsdp);
+    void WaitMilliseconds(unsigned long msec);
 
     extern const FADT *fadt;
+
+    const int kPMTimerFreq = 3579545; // 1秒で3579545回タイマがインクリメントされる
 }

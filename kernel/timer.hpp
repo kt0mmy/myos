@@ -42,5 +42,6 @@ private:
     std::deque<Message> &msg_queue_;
 };
 
-
+extern unsigned long lapic_timer_freq; // LAPICタイマーが1秒で何カウントするか
+const int kTimerFreq = 100; // 1秒間にTimerManager::Freqが呼ばれる回数(10msごとに論理タイマがカウントされる)
 extern TimerManager *timer_manager;
