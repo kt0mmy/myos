@@ -24,7 +24,8 @@ private:
     int value_; // タイムアウトに送信する値
 };
 // タイムアウトまで長いほど優先度低
-inline bool operator<(const Timer& lhs, const Timer& rhs) {
+inline bool operator<(const Timer &lhs, const Timer &rhs)
+{
     return lhs.Timeout() > rhs.Timeout();
 };
 
@@ -33,7 +34,7 @@ class TimerManager
 public:
     TimerManager(std::deque<Message> &msg_queue);
     void AddTimer(const Timer &timer);
-    void Tick();
+    bool Tick();
     unsigned long CurrentTick() const { return tick_; }
 
 private:
@@ -43,5 +44,8 @@ private:
 };
 
 extern unsigned long lapic_timer_freq; // LAPICタイマーが1秒で何カウントするか
-const int kTimerFreq = 100; // 1秒間にTimerManager::Freqが呼ばれる回数(10msごとに論理タイマがカウントされる)
+const int kTimerFreq = 100;            // 1秒間にTimerManager::Freqが呼ばれる回数(10msごとに論理タイマがカウントされる)
 extern TimerManager *timer_manager;
+
+const int kTaskTimerPeriod = static_cast<int>(kTimerFreq * 0.02); // 0.02 秒周期
+const int kTaskTimerValue = std::numeric_limits<int>::min();

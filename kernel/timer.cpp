@@ -1,6 +1,7 @@
 #include "timer.hpp"
 #include "interrupt.hpp"
 #include "acpi.hpp"
+#include "task.hpp"
 #include <limits>
 
 namespace
@@ -35,7 +36,6 @@ void InitializeLAPICTimer(std::deque<Message> &msg_queue)
     divide_config = 0b1011;
     lvt_timer = (0b010 << 16) | InterruptVector::kLAPICTimer; // 割り込みあり、周期的
     initial_count = lapic_timer_freq / kTimerFreq;
-    
 }
 
 void StartLAPICTimer()
@@ -57,7 +57,13 @@ void StopLAPICTimer()
 // 割り込み回数を時刻の1刻みとする
 void LAPICTimerOnInterrupt()
 {
-    timer_manager->Tick();
+    const bool task_timer_timeout = timer_manager->Tick();
+    NotifyEndOfInterrupt();
+
+    if (task_timer_timeout)
+    {
+        SwitchTask();
+    }
 }
 
 Timer::Timer(unsigned long timeout, int value) : timeout_{timeout}, value_{value}
@@ -74,14 +80,24 @@ void TimerManager::AddTimer(const Timer &timer)
     timers_.push(timer);
 }
 
-void TimerManager::Tick()
+bool TimerManager::Tick()
 {
     tick_++;
+    bool task_timer_timeout = false;
+
     while (true)
     {
         const auto &t = timers_.top();
         if (t.Timeout() > tick_)
             break;
+
+        if (t.Value() == kTaskTimerValue)
+        {
+            task_timer_timeout = true;
+            timers_.pop();
+            timers_.push(Timer{tick_ + kTaskTimerPeriod, kTaskTimerValue});
+            continue;
+        }
 
         Message m{Message::kTimerTimeout};
         m.arg.timer.timeout = t.Timeout();
@@ -90,4 +106,5 @@ void TimerManager::Tick()
 
         timers_.pop();
     }
+    return task_timer_timeout;
 }
