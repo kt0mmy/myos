@@ -199,7 +199,7 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
     memset(&task_b_ctx, 0, sizeof(task_b_ctx));
     task_b_ctx.rip = reinterpret_cast<uint64_t>(TaskB);
     task_b_ctx.rdi = 1;  // 第1引数
-    task_b_ctx.rsi = 42; // 第2引数
+    task_b_ctx.rsi = 43; // 第2引数
 
     task_b_ctx.cr3 = GetCR3();
     task_b_ctx.rflags = 0x202; // 割り込み許可
@@ -255,8 +255,6 @@ extern "C" void KernelMainNewStack(const FrameBuferConfig &frame_buffer_config_r
                 textbox_cursor_visible = !textbox_cursor_visible;
                 DrawTextCursor(textbox_cursor_visible);
                 layer_manager->Draw(text_window_layer_id);
-            } else if (msg.arg.timer.value == kTaskTimerValue) {
-                
             }
             break;
         case Message::kKeyPush:
