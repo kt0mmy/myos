@@ -2,6 +2,8 @@
 
 #include <array>
 #include <cstdint>
+#include <vector>
+#include <cstddef>
 
 struct TaskContext
 {
@@ -26,3 +28,33 @@ extern TaskContext task_b_ctx, task_a_ctx;
 
 void SwitchTask();
 void InitializeTask();
+
+using TaskFunc = void(uint64_t, uint64_t);
+class Task
+{
+public:
+    static const size_t kDefaultSizeStackBytes = 4096;
+    Task(uint64_t id);
+    Task &InitContext(TaskFunc *f, int64_t data);
+    TaskContext &Context();
+
+private:
+    uint64_t id_;
+    std::vector<uint64_t> stack_;
+    alignas(16) TaskContext context_;
+};
+
+class TaskManager
+{
+public:
+    TaskManager();
+    Task &NewTask();
+    void SwitchTask();
+
+private:
+    std::vector<std::unique_ptr<Task>> tasks_{};
+    uint64_t latest_id_{0};
+    size_t current_task_index_{0};
+};
+
+extern TaskManager *task_manager;
